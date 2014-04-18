@@ -15,7 +15,7 @@ cmd = """
 """
 
 test_input = [
-    name:'joe',
+    name:'bill',
     dogs: [
         name: 'sparky'
         age: 58
@@ -29,7 +29,7 @@ test_input = [
 ]
 
 expected_result = [
-    name: 'joe',
+    name: 'bill',
     dog_years: 64
 ,
     name: 'fred',
@@ -37,7 +37,7 @@ expected_result = [
 ]
 
 console.log '\n~~~~~'
-console.log _inspect(cmd) + ' ->\n'
+console.log cmd + ' ->\n'
 inspect pipeline.parse_pipeline cmd
 console.log '~~~~~\n'
 
