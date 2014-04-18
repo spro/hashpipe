@@ -1,7 +1,18 @@
 readline = require 'readline'
 pipeline = require './pipeline'
+builtins = require './builtins'
 
-rl = readline.createInterface process.stdin, process.stdout
+builtin_names = (n for n, f of builtins)
+builtinCompleter = (line) ->
+    to_complete = line.split(' ').slice(-1)[0]
+    hits = builtin_names.filter ((c) -> c.indexOf(to_complete) == 0)
+    show_completions = if hits.length then hits else builtin_names
+    return [show_completions, to_complete]
+
+rl = readline.createInterface
+    input: process.stdin
+    output: process.stdout
+    completer: builtinCompleter
 rl.setPrompt '> '
 rl.prompt()
 
