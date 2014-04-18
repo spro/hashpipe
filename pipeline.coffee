@@ -1,4 +1,5 @@
 parser = require './parser'
+builtins = require './builtins'
 async = require 'async'
 util = require 'util'
 _ = require 'underscore'
@@ -166,26 +167,10 @@ descend_obj = (_obj, _expr, ctx, final_cb) ->
 at = (inp, expr, ctx, cb) ->
     descend_obj inp, expr, ctx, cb
 
-# Command helpers
-combine = (inp, args) -> _.flatten([inp].concat(args)).filter (i) -> i
-nums = (l) -> l.map (n) -> Number(n) || 0
-calc = (f) ->
-    (inp, args, ctx, cb) ->
-        cb null, nums(combine(inp, args)).reduce(f)
-
-builtins =
-    id: (inp, args, ctx, cb) -> cb null, inp
-    echo: (inp, args, ctx, cb) -> cb null, args.join(' ')
-    '+': calc (a, b) -> a + b
-    '*': calc (a, b) -> a * b
-    '-': calc (a, b) -> a - b
-    '/': calc (a, b) -> a / b
-
 module.exports =
     exec_pipeline: exec_pipeline
     parse_pipeline: parse_pipeline
     run_pipeline: run_pipeline
     do_cmd: do_cmd
-    builtins: builtins
     at: at
 
