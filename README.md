@@ -79,6 +79,10 @@ To access one key of an array of objects, we can use the `:` or *map* operator. 
 
 ---
 
+*TODO:* Finish writing this. Readers: some `@` syntax is covered in https://github.com/spro/wwwsh/blob/master/docs/SYNTAX.md, but there is more to be said about the new parallel piping and sub-command features.
+
+---
+
 ## Builtins
 
 Echo:
