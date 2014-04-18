@@ -9,12 +9,12 @@ A DSL for asynchronous command pipelines.
 ```js
 [ { name: "bill", dogs: 
     [ { name: "sparky", age: 58 }, { name: "woofer", age: 6 } ] },
-  { name: "fred", dogs: [] } ]"""
+  { name: "fred", dogs: [] } ]
 ```
 
 &rarr; **pipeline** &rarr;
 
-```
+```js
 > id @ :{ name, dog_years: $( @ dogs:age | + 0) }
 ```
 
