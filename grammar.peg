@@ -1,0 +1,105 @@
+start
+  = pipeline
+
+// @ parser
+// ~~~~~~~~
+
+letter = [a-zA-Z0-9_]
+space = [ \n\t\r]*
+comma = space "," space
+dot = space "." space { return 'get'; }
+col = space ":" space { return 'map'; }
+open_bracket = space "[" space
+close_bracket = space "]" space
+at = space "@" space
+
+word = ls:letter+ { return ls.join(''); }
+
+array = open_bracket
+    values:(
+        head:at_expression
+        tail:(comma t:at_expression { return t; })*
+        { return [head].concat(tail); }
+    )
+    close_bracket { return values; }
+
+set = k:word col v:at_expression { var o = {}; o[k] = v; return o; }
+    / k:word { var o = {}; o[k] = [{get: k}]; return o; }
+
+obj = "{" space ss:(set comma?)+ space "}" {
+    ss = ss.map(function(sp) { return sp[0]; });
+    oss = {}
+    for (si in ss) {
+        var s = ss[si];
+        for (var k in s) {
+            oss[k] = s[k];
+        }
+    }
+    return oss;
+}
+
+section = obj / array / word
+
+do_sub = (s:dot t:sub_cmd { return t; })
+do_sub_ = (s:dot? t:sub_cmd { return t; })
+do_get = (s:dot t:section { return {get: t}; })
+do_get_ = (s:dot? t:section { return {get: t}; }) / (s:dot { return {get: '.'}; })
+do_map = (s:col+ t:section { return {map: t, depth:s.length}; })
+do_section = do_get / do_map
+
+at_expression =
+    space
+    head:(do_get_/do_sub_/do_map)
+    tail:do_section*
+    space
+    {
+        return [head].concat(tail);
+    }
+
+// Pipeline parser
+// ~~~~~~~~~~~~~~~
+
+pipe = space "|" space
+ppipe = space "||" space
+
+escd_at = letter "@" cmd_char / "\\@"
+cmd_char = [a-zA-Z0-9\-_:/.,%=?"'+*%{}\[\]] / escd_at
+cmd_word = sub_cmd / cs:cmd_char+ { return cs.join('').trim(); }
+
+cmd = head:cmd_word
+      tail:(space c:cmd_word { return c; })*
+      { return [head].concat(tail); }
+
+start_cmd =
+    cmd:cmd
+    atexp:(at atexp:at_expression { return atexp; })?
+    { return {type: 'pipe', cmd: cmd, at: atexp}; }
+spiped_cmd =
+    pipe cmd:cmd
+    atexp:(at atexp:at_expression { return atexp; })?
+    { return {type: 'pipe', cmd: cmd, at: atexp}; }
+ppiped_cmd =
+    ppipe cmd:cmd
+    atexp:(at atexp:at_expression { return atexp; })?
+    { return {type: 'ppipe', cmd: cmd, at: atexp}; }
+
+piped_cmd = start_cmd / spiped_cmd / ppiped_cmd
+
+sub_cmd =
+    "$("
+    head:(at atexp:at_expression {return atexp;})?
+    tail:pipeline
+    ")"
+    {
+        if (head != null) {
+            tail.unshift({type: 'id', at: head});
+        }
+        return {sub: tail};
+    }
+
+pipeline =
+    space
+    cmds:piped_cmd*
+    space
+    { return cmds; }
+
