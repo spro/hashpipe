@@ -63,7 +63,7 @@ pipe = space "|" space
 ppipe = space "||" space
 
 escd_at = letter "@" cmd_char / "\\@"
-cmd_char = [a-zA-Z0-9\-_:/.,%=?"'+*%{}\[\]] / escd_at
+cmd_char = [a-zA-Z0-9\-_:/.,#%=?"'+*%{}\[\]] / escd_at
 cmd_word = sub_cmd / cs:cmd_char+ { return cs.join('').trim(); }
 
 cmd = head:cmd_word
