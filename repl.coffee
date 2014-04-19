@@ -5,9 +5,8 @@ builtins = require './builtins'
 builtin_names = (n for n, f of builtins)
 builtinCompleter = (line) ->
     to_complete = line.split(' ').slice(-1)[0]
-    hits = builtin_names.filter ((c) -> c.indexOf(to_complete) == 0)
-    show_completions = if hits.length then hits else builtin_names
-    return [show_completions, to_complete]
+    completions = builtin_names.filter ((c) -> c.indexOf(to_complete) == 0)
+    return [completions, to_complete]
 
 rl = readline.createInterface
     input: process.stdin
