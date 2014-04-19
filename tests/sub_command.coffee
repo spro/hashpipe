@@ -5,12 +5,18 @@ util = require 'util'
 _inspect = (o) -> util.inspect o, depth: null
 inspect = (o) -> console.log _inspect o
 
-cmd = """
+cmd_sub_at = """
 
-    id @ :{
+    id seven @ :{
         name,
         dog_years: $(@dogs:age | + 0)
     }
+
+"""
+
+cmd_sub_pipe = """
+
+    echo $(@ 0.name | . $(echo chee | . se) )
 
 """
 
@@ -28,7 +34,7 @@ test_input = [
     dogs: []
 ]
 
-expected_result = [
+expected_sub_at_result = [
     name: 'bill',
     dog_years: 64
 ,
@@ -36,15 +42,34 @@ expected_result = [
     dog_years: 0
 ]
 
-console.log '\n~~~~~'
-console.log cmd + ' ->\n'
-inspect pipeline.parse_pipeline cmd
-console.log '~~~~~\n'
+expected_sub_pipe_result = 'billcheese'
 
-tape 'sub_command_test', (t) ->
+show_parsed = (cmd) ->
 
-    pipeline.exec_pipeline cmd, test_input, (err, test_result) ->
+    console.log '\n~~~~~'
+    console.log cmd + ' ->\n'
+    inspect pipeline.parse_pipeline cmd
+    console.log '~~~~~\n'
 
-        t.deepLooseEqual test_result, expected_result, 'Meets expectations.'
+tape 'cmd_sub_at', (t) ->
+
+    show_parsed cmd_sub_at
+    pipeline.exec_pipeline cmd_sub_at, test_input, (err, test_result) ->
+
+        t.deepLooseEqual test_result, expected_sub_at_result, 'Meets expectations.'
         t.end()
+
+        console.log '\n'
+        inspect test_result
+
+tape 'cmd_sub_pipe', (t) ->
+
+    show_parsed cmd_sub_pipe
+    pipeline.exec_pipeline cmd_sub_pipe, test_input, (err, test_result) ->
+
+        t.deepLooseEqual test_result, expected_sub_pipe_result, 'Meets expectations.'
+        t.end()
+
+        console.log '\n'
+        inspect test_result
 
