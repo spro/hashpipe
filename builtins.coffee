@@ -3,19 +3,27 @@ _ = require 'underscore'
 module.exports = builtins = {}
 
 # Command helpers
-combine = (inp, args) -> _.flatten([inp].concat(args)).filter (i) -> i
+valid = (i) ->
+    if _.isArray i
+        return (i.length > 0)
+    if _.isObject i
+        return (_.keys(i).length > 0)
+    return i
+combine = (inp, args) -> _.flatten([inp].concat(args)).filter valid
 
 # Arithmetic
 
-nums = (l) -> l.map (n) -> Number(n) || 0
-calc = (f) ->
-    (inp, args, ctx, cb) ->
-        cb null, nums(combine(inp, args)).reduce(f)
+num = (n) -> Number(n) || 0
 
-builtins['+'] = calc (a, b) -> a + b
-builtins['*'] = calc (a, b) -> a * b
-builtins['-'] = calc (a, b) -> a - b
-builtins['/'] = calc (a, b) -> a / b
+reducer = (f) ->
+    (inp, args, ctx, cb) ->
+        cb null, combine(inp, args).reduce(f)
+
+builtins['+'] = reducer (a, b) -> num(a) + num(b)
+builtins['*'] = reducer (a, b) -> num(a) * num(b)
+builtins['-'] = reducer (a, b) -> num(a) - num(b)
+builtins['/'] = reducer (a, b) -> num(a) / num(b)
+builtins['.'] = reducer (a, b) -> a + b
 
 # Basics
 
@@ -23,6 +31,14 @@ builtins.id = (inp, args, ctx, cb) -> cb null, inp
 builtins.echo = (inp, args, ctx, cb) -> cb null, args.join(' ')
 builtins.list = (inp, args, ctx, cb) -> cb null, args
 
+builtins.print = (inp, args, ctx, cb) ->
+    subd = args.join(' ')
+    if matched = subd.match /#{.+?}/g
+        for match in matched
+            key = match.slice(2,-1).trim()
+            val = inp[key]
+            subd = subd.replace match, val
+    cb null, subd
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
 builtins.reverse = (inp, args, ctx, cb) -> cb null, inp.reverse()
 builtins.head = (inp, args, ctx, cb) -> cb null, inp[..args[0]||50]
