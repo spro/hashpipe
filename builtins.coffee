@@ -36,7 +36,10 @@ builtins.print = (inp, args, ctx, cb) ->
     if matched = subd.match /#{.+?}/g
         for match in matched
             key = match.slice(2,-1).trim()
-            val = inp[key]
+            if key == '.'
+                val = inp
+            else
+                val = inp[key]
             subd = subd.replace match, val
     cb null, subd
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
@@ -78,6 +81,55 @@ request = require 'request'
 builtins.get = (inp, args, ctx, cb) ->
     request.get {url: args[0], json: true}, (err, res, data) ->
         cb null, data
+
+jsdom = require 'jsdom'
+jquery = require 'jquery'
+
+builtins.html2text = (inp, args, ctx, cb) ->
+    jsdom.env inp, (err, window) ->
+        $ = jquery(window)
+        text = $('h1, h2, h3, p')
+            .map(-> $(this).text())
+            .get().join(' ... ')
+        cb null, text
+
+builtins.jq = (inp, args, ctx, cb) ->
+    jsdom.env inp, (err, window) ->
+        $ = jquery(window)
+        els = []
+
+        $(args.join(' ')).each ->
+            $el = $(this)
+            el_json =
+                text: $el.text()
+            for attr in this.attributes
+                el_json[attr.name] = attr.value
+            els.push el_json
+
+        cb null, els
+
+# TODO: Break these out of builtins (and figure out how to
+# modularly include functions at the same time)
+
+builtins.youtube_links = (inp, args, ctx, cb) ->
+    jsdom.env inp, (err, window) ->
+        $ = jquery(window)
+        links = []
+
+        $('a').each ->
+
+            if $(this).attr('href')?.match /^\/watch/
+                links.push
+                    title: $(this).attr('title')
+                    href: $(this).attr('href')
+
+        cb null, links
+
+builtins.youtube_views = (inp, args, ctx, cb) ->
+    jsdom.env inp, (err, window) ->
+        $ = jquery(window)
+        text = $('.watch-view-count').text()
+        cb null, Number text.replace(/\D/g, '')
 
 # Keywords and counting
 
