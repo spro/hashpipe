@@ -15,7 +15,7 @@ cmd = """
 """
 
 test_input = [
-    name:'bill',
+    name: 'bill',
     dogs: [
         name: 'sparky'
         age: 58
@@ -24,7 +24,7 @@ test_input = [
         age: 6
     ],
 ,
-    name:'fred',
+    name: 'fred',
     dogs: []
 ]
 
