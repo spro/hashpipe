@@ -4,6 +4,8 @@ async = require 'async'
 util = require 'util'
 _ = require 'underscore'
 
+DEBUG = false
+
 # Grab some tools before you dig in
 recv_ = (t, s) -> console.log "[#{ t.toUpperCase() }] #{ s }"
 _inspect = (o) -> util.inspect o, depth: null
@@ -32,6 +34,12 @@ parse_pipeline = (cmd) ->
 # command in line or a final "stdout" callback
 
 run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
+    if DEBUG
+        console.log '\n=== RUNNING PIPELINE ==='
+        inspect inp
+        console.log ' ---> '
+        inspect _cmd_tokens
+        console.log '========================\n'
     cmd_tokens = _.clone _cmd_tokens
     cmd_token = cmd_tokens.shift()
     cmd_args = cmd_token.cmd
@@ -39,22 +47,30 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
     cmd_args = ['id'] if !cmd_args
 
     # Replace sub-commands and variables
-    subs = {}
-    subd_i = 0
-    subd_cmd_args = []
-    for cmd in cmd_args
-        if _.isObject cmd
-            subd_key = '$' + ++subd_i
-            subs[subd_key] = cmd.sub
-            cmd = subd_key
-        else if $vars = cmd.match /\$[\w]+/
-            for $v in $vars
-                vk = $v.slice 1
-                if v = ctx.env[vk]
-                    cmd = cmd.replace $v, v
-        subd_cmd_args.push cmd
-    cmd = subd_cmd_args.join(' ')
-    ctx.subs = subs
+    parse_args = (inp, cb) ->
+        if DEBUG
+            console.log 'parsing args for ' + _inspect inp
+            inspect cmd_args
+
+        replace_arg = (arg, _cb) ->
+            if _.isObject arg
+                run_pipeline arg.sub, inp, ctx, _cb
+            else if $vars = arg.match /\$[\w]+/
+                for $v in $vars
+                    vk = $v.slice 1
+                    if v = ctx.env[vk]
+                        arg = arg.replace $v, v
+                _cb null, arg
+            else
+                _cb null, arg
+
+        subs = {}
+        subd_i = 0
+        subd_cmd_args = []
+        async.map cmd_args, replace_arg, (err, new_args) ->
+            cmd = subd_cmd_args.join(' ')
+            ctx.subs = subs
+            cb new_args
 
     # Apply an at expression at the end
     at_apply = (data, cb) ->
@@ -66,6 +82,8 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
     # Check if we're at the final step
     if cmd_tokens.length == 0
         cb = (err, ret) ->
+            if DEBUG
+                console.log ' ===> ' + _inspect ret
             at_apply ret, final_cb
 
     # Create a callback to continue the pipeline otherwise
@@ -73,21 +91,31 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
         at_apply ret, (err, ret) ->
             run_pipeline cmd_tokens, ret, ctx, final_cb
 
+    # Parse arguments and then execute
+
     # Map if parallel piped
     if cmd_type == 'ppipe'
         tasks = inp.map (_inp) ->
-            (_cb) -> do_cmd cmd, _inp, ctx, _cb
+            (_cb) ->
+                parse_args _inp, (args) ->
+                    do_cmd args, _inp, ctx, _cb
         async.parallel tasks, cb
 
     # Just execute if single piped
     else
-        do_cmd cmd, inp, ctx, cb
+        parse_args inp, (args) ->
+            do_cmd args, inp, ctx, cb
 
 # Execute a given command by looking in `ctx.fns` for a function
 # called `[cmd]` and passing that function the split arguments
 
-do_cmd = (raw_cmd, inp, ctx, cb) ->
-    args = split_args(raw_cmd)
+do_cmd = (_args, inp, ctx, cb) ->
+    if DEBUG
+        console.log '\n##### DO CMD ######'
+        inspect _args
+        inspect inp
+        console.log '###################\n'
+    args = _.clone _args
     cmd = args.shift()
     if fn = ctx.fns[cmd] || builtins[cmd]
         fn(inp, args, ctx, cb)
