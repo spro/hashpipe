@@ -4,7 +4,7 @@ start
 // @ parser
 // ~~~~~~~~
 
-letter = [a-zA-Z0-9_]
+letter = [a-zA-Z0-9_-]
 space = [ \n\t\r]*
 comma = space "," space
 dot = space "." space { return 'get'; }
@@ -23,19 +23,14 @@ array = open_bracket
     )
     close_bracket { return values; }
 
-set = k:word col v:at_expression { var o = {}; o[k] = v; return o; }
-    / k:word { var o = {}; o[k] = [{get: k}]; return o; }
+okv =
+    k:word col v:at_expression { return {key: k, val: v}; }
+    / k:sub_cmd col v:at_expression { return {key: [k], val: v}; }
+    / k:word { return {key: k, val: [{get: k}]}; }
 
-obj = "{" space ss:(set comma?)+ space "}" {
+obj = "{" space ss:(okv comma?)+ space "}" {
     ss = ss.map(function(sp) { return sp[0]; });
-    oss = {}
-    for (si in ss) {
-        var s = ss[si];
-        for (var k in s) {
-            oss[k] = s[k];
-        }
-    }
-    return oss;
+    return {obj: ss};
 }
 
 section = obj / array / word
@@ -61,10 +56,15 @@ at_expression =
 
 pipe = space "|" space
 ppipe = space "||" space
+spipe = space "|=" space
+quote = space ["'] space
 
+ok_char = letter / [=:/.,#%!?'+*%^&{}\[\]]
 escd_at = letter "@" cmd_char / "\\@"
-cmd_char = [a-zA-Z0-9\-_:/.,#%=?"'+*%^&{}\[\]] / escd_at
-cmd_word = sub_cmd / cs:cmd_char+ { return cs.join('').trim(); }
+escd_paren = "\\(" { return "("; } / "\\)" { return ")"; }
+var_word = "$" ls:letter+ { return '$' + ls.join(''); }
+cmd_char = ok_char / escd_at / escd_paren / var_word
+cmd_word = quote cmd:cmd quote { return {quoted: cmd}; } /  cs:cmd_char+ { return cs.join('').trim(); } / sub_cmd 
 
 cmd = head:cmd_word
       tail:(space c:cmd_word { return c; })*
@@ -74,7 +74,7 @@ start_cmd =
     cmd:cmd
     atexp:(at atexp:at_expression { return atexp; })?
     { return {type: 'pipe', cmd: cmd, at: atexp}; }
-spiped_cmd =
+piped_cmd =
     pipe cmd:cmd
     atexp:(at atexp:at_expression { return atexp; })?
     { return {type: 'pipe', cmd: cmd, at: atexp}; }
@@ -82,8 +82,12 @@ ppiped_cmd =
     ppipe cmd:cmd
     atexp:(at atexp:at_expression { return atexp; })?
     { return {type: 'ppipe', cmd: cmd, at: atexp}; }
+spiped_cmd =
+    spipe cmd:cmd
+    atexp:(at atexp:at_expression { return atexp; })?
+    { return {type: 'spipe', cmd: cmd, at: atexp}; }
 
-piped_cmd = start_cmd / spiped_cmd / ppiped_cmd
+cmd_section = start_cmd / ppiped_cmd / spiped_cmd / piped_cmd 
 
 sub_cmd =
     "$("
@@ -99,7 +103,7 @@ sub_cmd =
 
 pipeline =
     space
-    cmds:piped_cmd*
+    cmds:cmd_section*
     space
     { return cmds; }
 
