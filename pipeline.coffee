@@ -21,6 +21,8 @@ class Context
     use: (fns) ->
         _.extend @fns, fns
         return @
+    alias: (n, p) ->
+        @fns[n] = through p
 createContext = (init={}) ->
     return new Context init
 
@@ -239,6 +241,9 @@ accessor = (obj, key) ->
                 return obj.slice(key)[0]
         return obj[key]
 
+through = (cmd) -> (inp, args, ctx, cb) ->
+    execPipeline cmd, inp, ctx, cb
+
 # Read in an at expression
 at = (inp, expr, ctx, cb) ->
     descendObj inp, expr, ctx, cb
@@ -249,5 +254,6 @@ module.exports =
     parsePipeline: parsePipeline
     runPipeline: runPipeline
     doCmd: doCmd
+    through: through
     at: at
 
