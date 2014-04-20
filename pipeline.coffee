@@ -11,6 +11,19 @@ recv_ = (t, s) -> console.log "[#{ t.toUpperCase() }] #{ s }"
 _inspect = (o) -> util.inspect o, depth: null
 inspect = (o) -> console.log _inspect o
 
+# Create a context that can be extended with `.use`
+
+class Context
+    constructor: (init) ->
+        _.extend @, init
+        @fns = {} if !@fns?
+        @env = {} if !@env?
+    use: (fns) ->
+        _.extend @fns, fns
+        return @
+createContext = (init={}) ->
+    return new Context init
+
 # Execute a pipeline given a command string, input object,
 # context and callback. An empty context object is created
 # if none is given.
@@ -18,9 +31,7 @@ inspect = (o) -> console.log _inspect o
 execPipeline = (cmd, inp, ctx, cb) ->
     if !cb?
         cb = ctx
-        ctx = {}
-    ctx.fns = {} if !ctx.fns?
-    ctx.env = {} if !ctx.env?
+        ctx = createContext()
     runPipeline parsePipeline(cmd), inp, ctx, cb
 
 # Parse a command pipeline into a series of tokens
@@ -233,6 +244,7 @@ at = (inp, expr, ctx, cb) ->
     descendObj inp, expr, ctx, cb
 
 module.exports =
+    createContext: createContext
     execPipeline: execPipeline
     parsePipeline: parsePipeline
     runPipeline: runPipeline

@@ -23,7 +23,7 @@ test_input = [
     dogs: []
 ]
 
-ctx =
+ctx = pipeline.createContext
     env:
         hi: 'hello'
         cheese: 'fromage'
