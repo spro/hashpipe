@@ -1,3 +1,4 @@
+fs = require 'fs'
 _ = require 'underscore'
 
 module.exports = builtins = {}
@@ -30,7 +31,16 @@ builtins['.'] = reducer (a, b) -> a + b
 builtins.id = (inp, args, ctx, cb) -> cb null, inp
 builtins.echo = (inp, args, ctx, cb) -> cb null, args.join(' ')
 builtins.list = (inp, args, ctx, cb) -> cb null, args
+builtins.range = (inp, args, ctx, cb) ->
+    if args.length == 2
+        i0 = num(args[0])
+        i1 = num(args[1]) - 1
+    else
+        i0 = 0
+        i1 = num(args[0]) - 1
+    cb null, [i0 .. i1]
 
+builtins.num = (inp, args, ctx, cb) -> cb null, num inp
 builtins.print = (inp, args, ctx, cb) ->
     subd = args.join(' ')
     if matched = subd.match /#{.+?}/g
@@ -45,20 +55,48 @@ builtins.print = (inp, args, ctx, cb) ->
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
 builtins.reverse = (inp, args, ctx, cb) -> cb null, inp.reverse()
 builtins.head = (inp, args, ctx, cb) -> cb null, inp[..args[0]||50]
-builtins.tail = (inp, args, ctx, cb) -> cb null, inp[inp.length-args[0]||50..]
+builtins.tail = (inp, args, ctx, cb) -> cb null, inp[inp.length-(args[0]||50)..]
 builtins.join = (inp, args, ctx, cb) -> cb null, inp.join args[0] || ' '
 builtins.split = (inp, args, ctx, cb) -> cb null, inp.split args[0] || '\n'
+builtins.unique = (inp, args, ctx, cb) -> cb null, _.uniq inp
 
 builtins.sleep = (inp, args, ctx, cb) -> setTimeout cb, Number args[0]
+
+# Environmental parasites
+
+# `inc` increments a number given a key
+builtins.inc = (inp, args, ctx, cb) ->
+    inc_key = args[0]
+    ctx[inc_key] = 0 if !ctx[inc_key]?
+    cb null, ++ctx[inc_key]
+
+# `ginc` gets or increments a number given a key and object key
+builtins.ginc = (inp, args, ctx, cb) ->
+    inc_key = args[0]
+    obj_key = args[1]
+    if !ctx[inc_key]?
+        ctx[inc_key] =
+            val: 0
+            objs: {}
+    if ctx[inc_key].objs[obj_key]?
+        cb null, ctx[inc_key].objs[obj_key]
+    else
+        obj_val = ++ctx[inc_key].val
+        ctx[inc_key].objs[obj_key] = obj_val
+        cb null, obj_val
 
 # Matching, filtering
 
 builtins.match = (inp, args, ctx, cb) ->
-    to_match = args[0]
+    if args.length == 2
+        inp = args[0]
+        match_with = args[1]
+    else
+        match_with = args[0]
     matched = []
     for i in inp
-        if i.match to_match
-            matched.push i.replace "(#{ to_match })", "<span class='object'>$1</span>"
+        if i.match match_with
+            matched.push i
     cb null, matched
 builtins.grep = builtins.match
 
@@ -108,6 +146,26 @@ builtins.jq = (inp, args, ctx, cb) ->
 
         cb null, els
 
+# File operations
+
+builtins.tee = (inp, args, ctx, cb) ->
+    console.log inp
+    cb null, inp
+
+builtins.cat = (inp, args, ctx, cb) ->
+    fs.readFile args[0], (err, buffer) ->
+        cb err, buffer.toString()
+
+builtins.write = (inp, args, ctx, cb) ->
+    fs.writeFile args[0], inp, (err) ->
+        cb null, 'Wrote to ' + args[0]
+
+builtins.parse = (inp, args, ctx, cb) ->
+    cb null, JSON.parse inp
+
+builtins.stringify = (inp, args, ctx, cb) ->
+    cb null, JSON.stringify inp
+
 # TODO: Break these out of builtins (and figure out how to
 # modularly include functions at the same time)
 
@@ -148,6 +206,9 @@ builtins.keywords = (inp, args, ctx, cb) ->
 builtins.words = (inp, args, ctx, cb) ->
     cb null, inp.match /[\w']{2,}/g
 
+builtins.slugify = (inp, args, ctx, cb) ->
+    cb null, inp.toLowerCase().replace(/\W+/g, '-').replace(/^\W?(.+)\W$/, '$1')
+
 builtins.count = (inp, args, ctx, cb) ->
     counts = {}
     for i in inp
@@ -160,6 +221,16 @@ builtins.count = (inp, args, ctx, cb) ->
             count: v
     counts_list.sort (a, b) -> a.count - b.count
     cb null, counts_list
+
+builtins.sort = (inp, args, ctx, cb) ->
+    if sort_by = args[0]
+        if sort_by[0] == '-'
+            sort_by = sort_by[1..]
+            cb null, inp.sort (a, b) -> b[sort_by] - a[sort_by]
+        else
+            cb null, inp.sort (a, b) -> a[sort_by] - b[sort_by]
+    else
+        cb null, inp.sort()
 
 # Test data
 
