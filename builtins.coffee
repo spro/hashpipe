@@ -30,6 +30,7 @@ builtins['.'] = reducer (a, b) -> a + b
 
 builtins.id = (inp, args, ctx, cb) -> cb null, inp
 builtins.echo = (inp, args, ctx, cb) -> cb null, args.join(' ')
+builtins.key = (inp, args, ctx, cb) -> cb null, args.join('')
 builtins.list = (inp, args, ctx, cb) -> cb null, args
 builtins.range = (inp, args, ctx, cb) ->
     if args.length == 2
