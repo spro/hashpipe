@@ -47,30 +47,27 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
     cmd_args = ['id'] if !cmd_args
 
     # Replace sub-commands and variables
-    parse_args = (inp, cb) ->
+    parse_args = (inp, args, cb) ->
         if DEBUG
             console.log 'parsing args for ' + _inspect inp
-            inspect cmd_args
+            console.log ':::> ' + _inspect args
 
         replace_arg = (arg, _cb) ->
             if _.isObject arg
-                run_pipeline arg.sub, inp, ctx, _cb
-            else if $vars = arg.match /\$[\w]+/
-                for $v in $vars
-                    vk = $v.slice 1
-                    if v = ctx.env[vk]
-                        arg = arg.replace $v, v
-                _cb null, arg
-            else
-                _cb null, arg
+                if arg.sub?
+                    return run_pipeline arg.sub, inp, ctx, _cb
+                else if arg.quoted?
+                    return parse_args inp, arg.quoted, (err, qargs) ->
+                        _cb null, qargs.join(' ')
+            else if _.isString(arg)
+                if $key = arg.match /\$[a-zA-Z0-9_-]+/
+                    $key = $key[0]
+                    key = $key.slice(1)
+                    arg = arg.replace $key, ctx.env[key]
+            _cb null, arg
 
-        subs = {}
-        subd_i = 0
-        subd_cmd_args = []
-        async.map cmd_args, replace_arg, (err, new_args) ->
-            cmd = subd_cmd_args.join(' ')
-            ctx.subs = subs
-            cb new_args
+        async.map args, replace_arg, (err, new_args) ->
+            cb null, new_args
 
     # Apply an at expression at the end
     at_apply = (data, cb) ->
@@ -93,17 +90,25 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
 
     # Parse arguments and then execute
 
-    # Map if parallel piped
+    # Parallel if ppiped
     if cmd_type == 'ppipe'
         tasks = inp.map (_inp) ->
             (_cb) ->
-                parse_args _inp, (args) ->
+                parse_args _inp, cmd_args, (err, args) ->
                     do_cmd args, _inp, ctx, _cb
         async.parallel tasks, cb
 
+    # Series if spiped
+    if cmd_type == 'spipe'
+        tasks = inp.map (_inp) ->
+            (_cb) ->
+                parse_args _inp, cmd_args, (err, args) ->
+                    do_cmd args, _inp, ctx, _cb
+        async.series tasks, cb
+
     # Just execute if single piped
     else
-        parse_args inp, (args) ->
+        parse_args inp, cmd_args, (err, args) ->
             do_cmd args, inp, ctx, cb
 
 # Execute a given command by looking in `ctx.fns` for a function
@@ -175,21 +180,53 @@ descend_obj = (_obj, _expr, ctx, final_cb) ->
         async.parallel tasks, cb
 
     # Object result
-    else if _.isObject step.get
-        tasks = {}
-        for k, e of step.get
-            do (k, e) ->
-                tasks[k] = (_cb) ->
-                    descend_obj obj, e, ctx, _cb
-        async.parallel tasks, cb
+    else if _.isObject(step.get) && step.get.obj?
+
+        tasks = []
+        for set in step.get.obj
+            do (set) ->
+                k = set.key
+                e = set.val
+
+                if _.isString k
+                    # Key is a string, just get value
+                    tasks.push (_cb) ->
+                        descend_obj obj, e, ctx, (err, v_obj) ->
+                            dobj =
+                                key: k
+                                val: v_obj
+                            _cb null, dobj
+                else
+                    # Key is an expression, get both key value and value value
+                    tasks.push (_cb) ->
+                        descend_obj obj, k, ctx, (err, k_obj) ->
+                            descend_obj obj, e, ctx, (err, v_obj) ->
+                                dobj =
+                                    key: k_obj
+                                    val: v_obj
+                                _cb null, dobj
+
+        # Combine results into single object
+        async.parallel tasks, (err, results) ->
+            result_obj = {}
+            for result in results
+                result_obj[result.key] = result.val
+            cb null, result_obj
 
     # Get attribute
     else
-        if step.get == '.'
-            obj = obj
-        else
-            obj = obj[step.get]
-        cb null, obj
+        cb null, accessor obj, step.get
+
+accessor = (obj, key) ->
+    if key == '.'
+        return obj
+    else
+        if key.match /^-?\d+/
+            key = Number key
+            # Pythonesque negative indexes
+            if key < 0
+                return obj.slice(key)[0]
+        return obj[key]
 
 # Read in an at expression
 at = (inp, expr, ctx, cb) ->
