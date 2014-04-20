@@ -15,25 +15,25 @@ inspect = (o) -> console.log _inspect o
 # context and callback. An empty context object is created
 # if none is given.
 
-exec_pipeline = (cmd, inp, ctx, cb) ->
+execPipeline = (cmd, inp, ctx, cb) ->
     if !cb?
         cb = ctx
         ctx = {}
     ctx.fns = {} if !ctx.fns?
     ctx.env = {} if !ctx.env?
-    run_pipeline parse_pipeline(cmd), inp, ctx, cb
+    runPipeline parsePipeline(cmd), inp, ctx, cb
 
 # Parse a command pipeline into a series of tokens
-# that can be passed to `run_pipeline`
+# that can be passed to `runPipeline`
 
-parse_pipeline = (cmd) ->
+parsePipeline = (cmd) ->
     parser.parse cmd
 
 # Execute a parsed command pipeline, executing each part
 # recursively by setting a callback that is either the next
 # command in line or a final "stdout" callback
 
-run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
+runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
     if DEBUG
         console.log '\n=== RUNNING PIPELINE ==='
         inspect inp
@@ -47,17 +47,17 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
     cmd_args = ['id'] if !cmd_args
 
     # Replace sub-commands and variables
-    parse_args = (inp, args, cb) ->
+    parseArgs = (inp, args, cb) ->
         if DEBUG
             console.log 'parsing args for ' + _inspect inp
             console.log ':::> ' + _inspect args
 
-        replace_arg = (arg, _cb) ->
+        replaceArg = (arg, _cb) ->
             if _.isObject arg
                 if arg.sub?
-                    return run_pipeline arg.sub, inp, ctx, _cb
+                    return runPipeline arg.sub, inp, ctx, _cb
                 else if arg.quoted?
-                    return parse_args inp, arg.quoted, (err, qargs) ->
+                    return parseArgs inp, arg.quoted, (err, qargs) ->
                         _cb null, qargs.join(' ')
             else if _.isString(arg)
                 if $key = arg.match /\$[a-zA-Z0-9_-]+/
@@ -66,11 +66,11 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
                     arg = arg.replace $key, ctx.env[key]
             _cb null, arg
 
-        async.map args, replace_arg, (err, new_args) ->
+        async.map args, replaceArg, (err, new_args) ->
             cb null, new_args
 
     # Apply an at expression at the end
-    at_apply = (data, cb) ->
+    applyAt = (data, cb) ->
         if cmd_token.at?
             at data, cmd_token.at, ctx, cb
         else
@@ -81,12 +81,12 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
         cb = (err, ret) ->
             if DEBUG
                 console.log ' ===> ' + _inspect ret
-            at_apply ret, final_cb
+            applyAt ret, final_cb
 
     # Create a callback to continue the pipeline otherwise
     else cb = (err, ret) ->
-        at_apply ret, (err, ret) ->
-            run_pipeline cmd_tokens, ret, ctx, final_cb
+        applyAt ret, (err, ret) ->
+            runPipeline cmd_tokens, ret, ctx, final_cb
 
     # Parse arguments and then execute
 
@@ -94,27 +94,27 @@ run_pipeline = (_cmd_tokens, inp, ctx, final_cb) ->
     if cmd_type == 'ppipe'
         tasks = inp.map (_inp) ->
             (_cb) ->
-                parse_args _inp, cmd_args, (err, args) ->
-                    do_cmd args, _inp, ctx, _cb
+                parseArgs _inp, cmd_args, (err, args) ->
+                    doCmd args, _inp, ctx, _cb
         async.parallel tasks, cb
 
     # Series if spiped
     if cmd_type == 'spipe'
         tasks = inp.map (_inp) ->
             (_cb) ->
-                parse_args _inp, cmd_args, (err, args) ->
-                    do_cmd args, _inp, ctx, _cb
+                parseArgs _inp, cmd_args, (err, args) ->
+                    doCmd args, _inp, ctx, _cb
         async.series tasks, cb
 
     # Just execute if single piped
     else
-        parse_args inp, cmd_args, (err, args) ->
-            do_cmd args, inp, ctx, cb
+        parseArgs inp, cmd_args, (err, args) ->
+            doCmd args, inp, ctx, cb
 
 # Execute a given command by looking in `ctx.fns` for a function
 # called `[cmd]` and passing that function the split arguments
 
-do_cmd = (_args, inp, ctx, cb) ->
+doCmd = (_args, inp, ctx, cb) ->
     if DEBUG
         console.log '\n##### DO CMD ######'
         inspect _args
@@ -131,23 +131,23 @@ do_cmd = (_args, inp, ctx, cb) ->
 # while attempting to treat quoted strings as single arguments.
 # TODO: Make a more robust parser that can handle escaping, etc.
 
-split_args = (s) ->
+splitArgs = (s) ->
     args = []
     s.trim().replace /"([^"]*)"|'([^']*)'|(\S+)/g, (g0,g1,g2,g3) ->
         args.push(g1 || g2 || g3 || '')
     return args
 
 # Map a function into array of arrays at a certain depth
-map_into = (l, f, d, cb) ->
+mapInto = (l, f, d, cb) ->
     if d == 1
         async.map l, f, cb
     else
-        _into = (_l, _cb) -> map_into _l, f, d - 1, _cb
+        _into = (_l, _cb) -> mapInto _l, f, d - 1, _cb
         async.map l, _into, cb
 
 # Take an object and an expression and follow the expression
 # tree down to the desired result
-descend_obj = (_obj, _expr, ctx, final_cb) ->
+descendObj = (_obj, _expr, ctx, final_cb) ->
     obj = _.clone _obj
     expr = _.clone _expr
 
@@ -158,7 +158,7 @@ descend_obj = (_obj, _expr, ctx, final_cb) ->
         cb = final_cb
 
     else cb = (err, ret) ->
-        descend_obj ret, expr, ctx, final_cb
+        descendObj ret, expr, ctx, final_cb
 
     if !step?
         cb null, obj
@@ -166,17 +166,17 @@ descend_obj = (_obj, _expr, ctx, final_cb) ->
     # Map attributes
     if step.map?
         map_get = (__obj, _cb) ->
-            descend_obj __obj, [{get: step.map}], ctx, _cb
-        map_into obj, map_get, step.depth, cb
+            descendObj __obj, [{get: step.map}], ctx, _cb
+        mapInto obj, map_get, step.depth, cb
 
     # Substitution
     else if step.sub?
-        run_pipeline step.sub, obj, ctx, cb
+        runPipeline step.sub, obj, ctx, cb
 
     # Array result
     else if _.isArray step.get
         tasks = step.get.map (step_expr) ->
-            (_cb) -> descend_obj obj, step_expr, ctx, _cb
+            (_cb) -> descendObj obj, step_expr, ctx, _cb
         async.parallel tasks, cb
 
     # Object result
@@ -191,7 +191,7 @@ descend_obj = (_obj, _expr, ctx, final_cb) ->
                 if _.isString k
                     # Key is a string, just get value
                     tasks.push (_cb) ->
-                        descend_obj obj, e, ctx, (err, v_obj) ->
+                        descendObj obj, e, ctx, (err, v_obj) ->
                             dobj =
                                 key: k
                                 val: v_obj
@@ -199,8 +199,8 @@ descend_obj = (_obj, _expr, ctx, final_cb) ->
                 else
                     # Key is an expression, get both key value and value value
                     tasks.push (_cb) ->
-                        descend_obj obj, k, ctx, (err, k_obj) ->
-                            descend_obj obj, e, ctx, (err, v_obj) ->
+                        descendObj obj, k, ctx, (err, k_obj) ->
+                            descendObj obj, e, ctx, (err, v_obj) ->
                                 dobj =
                                     key: k_obj
                                     val: v_obj
@@ -230,12 +230,12 @@ accessor = (obj, key) ->
 
 # Read in an at expression
 at = (inp, expr, ctx, cb) ->
-    descend_obj inp, expr, ctx, cb
+    descendObj inp, expr, ctx, cb
 
 module.exports =
-    exec_pipeline: exec_pipeline
-    parse_pipeline: parse_pipeline
-    run_pipeline: run_pipeline
-    do_cmd: do_cmd
+    execPipeline: execPipeline
+    parsePipeline: parsePipeline
+    runPipeline: runPipeline
+    doCmd: doCmd
     at: at
 

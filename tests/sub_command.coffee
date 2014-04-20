@@ -93,20 +93,20 @@ tests.escd_quoted =
 #
 
 # Print out the parsed command tree
-show_parsed = (cmd) ->
+showParsed = (cmd) ->
 
     console.log '\n~~~~~'
     console.log cmd + ' ->\n'
-    inspect pipeline.parse_pipeline cmd
+    inspect pipeline.parsePipeline cmd
     console.log '~~~~~\n'
 
 # Run a test
-run_test = (test_name) ->
+runTest = (test_name) ->
 
     tape test_name, (t) ->
 
-        show_parsed tests[test_name].cmd
-        pipeline.exec_pipeline tests[test_name].cmd, test_input, ctx, (err, test_result) ->
+        showParsed tests[test_name].cmd
+        pipeline.execPipeline tests[test_name].cmd, test_input, ctx, (err, test_result) ->
 
             t.deepLooseEqual test_result, tests[test_name].expected, 'Meets expectations.'
             t.end()
@@ -116,5 +116,5 @@ run_test = (test_name) ->
 
 # Run all the tests
 for test_name, test_data of tests
-    run_test test_name
+    runTest test_name
 
