@@ -27,12 +27,29 @@ ctx = pipeline.createContext
     env:
         hi: 'hello'
         cheese: 'fromage'
+        george:
+            name: 'Gregory'
+
+ctx.use 'keywords' # for slugify
 
 #
 # TESTS
 #
 
 tests = {}
+
+tests.first =
+    cmd: """ obj name joe | echo $( @ name ) """
+    expected: 'joe'
+
+# Test using a sub-pipe within a sub-pipe
+tests.sub_pipe  =
+    cmd: """
+
+        echo $(@ 0.name | . $(echo chee | . se) )
+
+    """
+    expected: 'billcheese'
 
 # Test using a sub-pipe as an object value
 tests.sub_val =
@@ -51,15 +68,6 @@ tests.sub_val =
         name: 'fred',
         dog_years: 0
     ]
-
-# Test using a sub-pipe within a sub-pipe
-tests.sub_pipe  =
-    cmd: """
-
-        echo $(@ 0.name | . $(echo chee | . se) )
-
-    """
-    expected: 'billcheese'
 
 # Test using a sub-pipe as an object key
 tests.sub_key =
@@ -84,9 +92,22 @@ tests.sub_var =
     cmd: """ echo $hi """
     expected: 'hello'
 
+# Test character escapes alongside variables
 tests.escd_quoted =
-    cmd: """ print "\\)=$cheese" """
+    cmd: """ echo "\\)=$cheese" """
     expected: ')=fromage'
+
+# Test variables
+tests.vars =
+    cmd: """ frank = 5 ; echo $frank """
+    expected: [5, '5']
+
+# Test object variables, variable @-expressions, `;` separated results
+tests.obj_vars =
+    cmd: """ fred = obj name fred ; echo $( $fred @ name ) """
+    expected: [{name: 'fred'}, 'fred']
+
+# Test
 
 #
 # EXECUTION
@@ -97,7 +118,7 @@ showParsed = (cmd) ->
 
     console.log '\n~~~~~'
     console.log cmd + ' ->\n'
-    inspect pipeline.parsePipeline cmd
+    inspect pipeline.parsePipelines cmd
     console.log '~~~~~\n'
 
 # Run a test
@@ -106,7 +127,7 @@ runTest = (test_name) ->
     tape test_name, (t) ->
 
         showParsed tests[test_name].cmd
-        pipeline.execPipeline tests[test_name].cmd, test_input, ctx, (err, test_result) ->
+        pipeline.execPipelines tests[test_name].cmd, test_input, ctx, (err, test_result) ->
 
             t.deepLooseEqual test_result, tests[test_name].expected, 'Meets expectations.'
             t.end()
