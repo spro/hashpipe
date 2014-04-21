@@ -28,10 +28,42 @@ builtins['.'] = reducer (a, b) -> a + b
 
 # Basics
 
+# `id` returns its input
+# val -> id -> val
 builtins.id = (inp, args, ctx, cb) -> cb null, inp
+
+# `val` returns its first argument as is
+# echo val -> "val"
+builtins.val = (inp, args, ctx, cb) -> cb null, args[0]
+
+# `echo` returns its arguments joined as a string
+# echo val -> "val"
 builtins.echo = (inp, args, ctx, cb) -> cb null, args.join(' ')
+
+# `key` is `echo` without spaces, useful for building keys
+# key "a" ":b:" "c" -> "a:b:c"
 builtins.key = (inp, args, ctx, cb) -> cb null, args.join('')
+
+# `num` coerces input into a number
+# val -> num -> #val
+builtins.num = (inp, args, ctx, cb) -> cb null, num inp
+
+# Building objects and arrays
+
+# list val val val -> [val, val, val]
 builtins.list = (inp, args, ctx, cb) -> cb null, args
+
+# obj "key" val "key" val -> {key: val, key: val}
+builtins.obj = (inp, args, ctx, cb) ->
+    abj = {}
+    if args.length
+        i = 0
+        while i < args.length
+            abj[args[i]] = args[i+1]
+            i+=2
+    cb null, abj
+
+# range #start? #stop -> [#i]
 builtins.range = (inp, args, ctx, cb) ->
     if args.length == 2
         i0 = num(args[0])
@@ -41,29 +73,23 @@ builtins.range = (inp, args, ctx, cb) ->
         i1 = num(args[0]) - 1
     cb null, [i0 .. i1]
 
-builtins.num = (inp, args, ctx, cb) -> cb null, num inp
-builtins.print = (inp, args, ctx, cb) ->
-    subd = args.join(' ')
-    if matched = subd.match /#{.+?}/g
-        for match in matched
-            key = match.slice(2,-1).trim()
-            if key == '.'
-                val = inp
-            else
-                val = inp[key]
-            subd = subd.replace match, val
-    cb null, subd
+# List operations
+
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
 builtins.reverse = (inp, args, ctx, cb) -> cb null, inp.reverse()
 builtins.head = (inp, args, ctx, cb) -> cb null, inp[..args[0]||50]
 builtins.tail = (inp, args, ctx, cb) -> cb null, inp[inp.length-(args[0]||50)..]
 builtins.join = (inp, args, ctx, cb) -> cb null, inp.join args[0] || ' '
-builtins.split = (inp, args, ctx, cb) -> cb null, inp.split args[0] || '\n'
+builtins.split = (inp, args, ctx, cb) -> cb null, inp.split(args[0] || '\n')
 builtins.unique = (inp, args, ctx, cb) -> cb null, _.uniq inp
 
 builtins.sleep = (inp, args, ctx, cb) -> setTimeout cb, Number args[0]
 
 # Environmental parasites
+
+builtins.let = (inp, args, ctx, cb) ->
+    ctx.env[args[0]] = args[1]
+    cb null, ctx.env[args[0]]
 
 # `inc` increments a number given a key
 builtins.inc = (inp, args, ctx, cb) ->
@@ -113,102 +139,15 @@ builtins.filter = (inp, args, ctx, cb) ->
             filtered_inp.push(i) if i
     cb null, filtered_inp
 
-# HTTP Requests
-
-request = require 'request'
-
-builtins.get = (inp, args, ctx, cb) ->
-    request.get {url: args[0], json: true}, (err, res, data) ->
-        cb null, data
-
-jsdom = require 'jsdom'
-jquery = require 'jquery'
-
-builtins.html2text = (inp, args, ctx, cb) ->
-    jsdom.env inp, (err, window) ->
-        $ = jquery(window)
-        text = $('h1, h2, h3, p')
-            .map(-> $(this).text())
-            .get().join(' ... ')
-        cb null, text
-
-builtins.jq = (inp, args, ctx, cb) ->
-    jsdom.env inp, (err, window) ->
-        $ = jquery(window)
-        els = []
-
-        $(args.join(' ')).each ->
-            $el = $(this)
-            el_json =
-                text: $el.text()
-            for attr in this.attributes
-                el_json[attr.name] = attr.value
-            els.push el_json
-
-        cb null, els
-
-# File operations
-
 builtins.tee = (inp, args, ctx, cb) ->
     console.log inp
     cb null, inp
-
-builtins.cat = (inp, args, ctx, cb) ->
-    fs.readFile args[0], (err, buffer) ->
-        cb err, buffer.toString()
-
-builtins.write = (inp, args, ctx, cb) ->
-    fs.writeFile args[0], inp, (err) ->
-        cb null, 'Wrote to ' + args[0]
 
 builtins.parse = (inp, args, ctx, cb) ->
     cb null, JSON.parse inp
 
 builtins.stringify = (inp, args, ctx, cb) ->
     cb null, JSON.stringify inp
-
-# TODO: Break these out of builtins (and figure out how to
-# modularly include functions at the same time)
-
-builtins.youtube_links = (inp, args, ctx, cb) ->
-    jsdom.env inp, (err, window) ->
-        $ = jquery(window)
-        links = []
-
-        $('a').each ->
-
-            if $(this).attr('href')?.match /^\/watch/
-                links.push
-                    title: $(this).attr('title')
-                    href: $(this).attr('href')
-
-        cb null, links
-
-builtins.youtube_views = (inp, args, ctx, cb) ->
-    jsdom.env inp, (err, window) ->
-        $ = jquery(window)
-        text = $('.watch-view-count').text()
-        cb null, Number text.replace(/\D/g, '')
-
-# Keywords and counting
-
-stopwords = RegExp '\\b' + "a about above after again against all am an and any are aren't as at be because been before being below between both but by can't cannot could couldn't did didn't do does doesn't doing don't down during each few for from further get got had hadn't has hasn't have haven't having he he'd he'll he's her here here's hers herself him himself his how how's i i'd i'll i'm i've if in into is isn't it it's its itself let's like me more most mustn't my myself no nor not of off on once only or other ought our ours ourselves out over own same shan't she she'd she'll she's should shouldn't so some such than that that's the their theirs them themselves then there there's these they they'd they'll they're they've this those through to too under until up very was wasn't we we'd we'll we're we've were weren't what what's when when's where where's which while who who's whom why why's will with won't would wouldn't you you'd you'll you're you've your yours yourself yourselves".split(' ').reverse().join('\\b|\\b') + '\\b', 'g'
-
-strip_html = (s) -> s.replace(/<(?:.|\n)*?>/gm, '')
-builtins.strip_html = (inp, args, ctx, cb) ->
-    cb null, strip_html(inp)
-
-builtins.keywords = (inp, args, ctx, cb) ->
-    cb null, strip_html(inp.toLowerCase())
-        .replace(stopwords, '')
-        .replace(/\s+/, ' ')
-        .match(/[a-z']{2,}/g)
-
-builtins.words = (inp, args, ctx, cb) ->
-    cb null, inp.match /[\w']{2,}/g
-
-builtins.slugify = (inp, args, ctx, cb) ->
-    cb null, inp.toLowerCase().replace(/\W+/g, '-').replace(/^\W?(.+)\W$/, '$1')
 
 builtins.count = (inp, args, ctx, cb) ->
     counts = {}
@@ -233,21 +172,9 @@ builtins.sort = (inp, args, ctx, cb) ->
     else
         cb null, inp.sort()
 
-# Test data
+# Including modules
 
-dog_people = [
-    name: 'bill',
-    dogs: [
-        name: 'sparky'
-        age: 58
-    ,
-        name: 'woofer'
-        age: 6
-    ],
-,
-    name: 'fred',
-    dogs: []
-]
-
-builtins.dog_people = (inp, args, ctx, cb) -> cb null, dog_people
-
+builtins.use = (inp, args, ctx, cb) ->
+    for arg in args
+        ctx.use arg
+    cb null, 'Using: ' + args.join(', ')
