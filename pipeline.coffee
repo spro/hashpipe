@@ -19,8 +19,15 @@ class Context
         @fns = {} if !@fns?
         @env = {} if !@env?
     use: (fns) ->
-        _.extend @fns, fns
-        return @
+        # Module name
+        if _.isString fns
+            if fns.match /^\w/
+                fns = './modules/' + fns
+            _.extend @fns, require(fns)
+        # Object of functions
+        else if _.isObject fns
+            _.extend @fns, fns
+        return @ # for chaining
     alias: (n, p) ->
         @fns[n] = through p
 createContext = (init={}) ->
@@ -30,21 +37,34 @@ createContext = (init={}) ->
 # context and callback. An empty context object is created
 # if none is given.
 
-execPipeline = (cmd, inp, ctx, cb) ->
+execPipelines = (cmd, inp, ctx, cb) ->
     if !cb?
         cb = ctx
         ctx = createContext()
-    runPipeline parsePipeline(cmd), inp, ctx, cb
+    pipelines = parsePipelines(cmd)
+    runPipelines pipelines, inp, ctx, cb
 
 # Parse a command pipeline into a series of tokens
 # that can be passed to `runPipeline`
 
-parsePipeline = (cmd) ->
+parsePipelines = (cmd) ->
     parser.parse cmd
 
 # Execute a parsed command pipeline, executing each part
 # recursively by setting a callback that is either the next
 # command in line or a final "stdout" callback
+
+#        /~+~+~+~+~+~+~+~+~+~+~+~+~+\
+#       |  PROCEED AT YOUR OWN RISK  |
+#       |       dragons afoot        |
+#        \+~+~+~+~+~+~+~+~+~+~+~+~+~/ 
+
+runPipelines = (pipelines, inp, ctx, cb) ->
+    if pipelines.length > 1
+        _runPipeline = (_pipeline, _cb) ->
+            runPipeline _pipeline, inp, ctx, _cb
+        async.mapSeries pipelines, _runPipeline, cb
+    else runPipeline pipelines[0], inp, ctx, cb
 
 runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
     if DEBUG
@@ -68,12 +88,18 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
         replaceArg = (arg, _cb) ->
             if _.isObject arg
                 if arg.sub?
-                    return runPipeline arg.sub, inp, ctx, _cb
+                    return runPipelines arg.sub, inp, ctx, _cb
                 else if arg.quoted?
                     return parseArgs inp, arg.quoted, (err, qargs) ->
                         _cb null, qargs.join(' ')
             else if _.isString(arg)
-                if $key = arg.match /\$[a-zA-Z0-9_-]+/
+                if arg == '$!'
+                    arg = inp
+                else if $key = arg.match /^\$[a-zA-Z0-9_-]+$/
+                    $key = $key[0]
+                    key = $key.slice(1)
+                    arg = ctx.env[key]
+                else if $key = arg.match /\$[a-zA-Z0-9_-]+/
                     $key = $key[0]
                     key = $key.slice(1)
                     arg = arg.replace $key, ctx.env[key]
@@ -112,12 +138,27 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
         async.parallel tasks, cb
 
     # Series if spiped
-    if cmd_type == 'spipe'
+    else if cmd_type == 'spipe'
         tasks = inp.map (_inp) ->
             (_cb) ->
                 parseArgs _inp, cmd_args, (err, args) ->
                     doCmd args, _inp, ctx, _cb
         async.series tasks, cb
+
+    # Callback value if $val
+    else if cmd_token.val?
+        parseArgs inp, [cmd_token.val], (err, parsed) ->
+            cb null, parsed[0]
+
+    # Callback value if $var
+    else if cmd_token.var?
+        $key = cmd_token.var
+        if $key == '$!'
+            val = inp
+        else
+            key = $key.slice(1)
+            val = ctx.env[key]
+        cb null, val
 
     # Just execute if single piped
     else
@@ -158,6 +199,11 @@ mapInto = (l, f, d, cb) ->
         _into = (_l, _cb) -> mapInto _l, f, d - 1, _cb
         async.map l, _into, cb
 
+#   , \-._ >._,_     _,_.< _.-/
+#   (   )  \(-='(     )`--)/  (   _    
+#    `\-\_/-')\/'     `\/(`-\_/-/' `   
+#     <`)_--(_\_       _/_)--_('> 
+
 # Take an object and an expression and follow the expression
 # tree down to the desired result
 descendObj = (_obj, _expr, ctx, final_cb) ->
@@ -165,6 +211,12 @@ descendObj = (_obj, _expr, ctx, final_cb) ->
     expr = _.clone _expr
 
     step = expr.shift()
+    if DEBUG
+        console.log "\n/ - - ~ @ ~ - - \\"
+        inspect obj
+        console.log "== @ ==> "
+        inspect step
+        console.log "\\ - - ~ @ ~ - - /\n"
 
     # Check if we're at the final step
     if expr.length == 0
@@ -184,7 +236,7 @@ descendObj = (_obj, _expr, ctx, final_cb) ->
 
     # Substitution
     else if step.sub?
-        runPipeline step.sub, obj, ctx, cb
+        runPipelines step.sub, obj, ctx, cb
 
     # Array result
     else if _.isArray step.get
@@ -242,7 +294,7 @@ accessor = (obj, key) ->
         return obj[key]
 
 through = (cmd) -> (inp, args, ctx, cb) ->
-    execPipeline cmd, inp, ctx, cb
+    execPipelines cmd, inp, ctx, cb
 
 # Read in an at expression
 at = (inp, expr, ctx, cb) ->
@@ -250,8 +302,8 @@ at = (inp, expr, ctx, cb) ->
 
 module.exports =
     createContext: createContext
-    execPipeline: execPipeline
-    parsePipeline: parsePipeline
+    execPipelines: execPipelines
+    parsePipelines: parsePipelines
     runPipeline: runPipeline
     doCmd: doCmd
     through: through
