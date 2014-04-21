@@ -58,16 +58,21 @@ pipe = space "|" space
 ppipe = space "||" space
 spipe = space "|=" space
 quote = space ["'] space
+quote_ = space ["']
+_quote = ["'] space
 
 number = s:"-"? ds:[0-9]+ { n = Number(ds.join('')); if (s) n = n*-1; return n; }
 ok_char = letter / [=:/.,#%!?'+*%^&{}\[\]]
-escd_at = letter "@" cmd_char / "\\@"
+escd_at = (letter "@" cmd_char / "\\@") { return "@"; }
 escd_paren = "\\(" { return "("; } / "\\)" { return ")"; }
-var_word = "$" ls:letter+ { return '$' + ls.join(''); }
+letter_word = ls:letter+ { return ls.join(''); }
+var_word = "$" w:letter_word { return '$' + w; }
     / "$!"
 cmd_char = ok_char / escd_at / escd_paren / var_word
 cmd_word = cs:cmd_char+ { return cs.join('').trim(); }
-quoted_phrase = quote cmd:cmd quote { return {quoted: cmd}; }
+quoted_cmd = quote cmd:cmd quote { return {quoted: cmd}; }
+quoted_literal = quote_ ls:(" " / cmd_char / "\\n" { return '\n'; })* _quote { return {quoted: [ls.join('')] }; }
+quoted_phrase = quoted_literal / quoted_cmd
 cmd_phrase = quoted_phrase / cmd_word / sub_cmd 
 
 cmd = head:cmd_phrase
@@ -118,11 +123,15 @@ pipeline =
 
 semi = space ";" space
 pipelines =
-    head:(setting / pipeline)
+    head:(aliasing / setting / pipeline)
     tail:(semi pipeline:pipeline { return pipeline; })*
     { return [head].concat(tail); }
 
-setup = var_word:cmd_word space "=" space { return var_word; }
+setup = var_word:letter_word space "=" space { return var_word; }
+
+aliasing =
+    space "alias" space alias:letter_word space "=" space rest:.+
+    { return [{cmd: ['alias', alias, rest.join('').trim()]}]; }
 
 setting =
     space set:setup pipeline:pipeline
