@@ -178,3 +178,7 @@ builtins.use = (inp, args, ctx, cb) ->
     for arg in args
         ctx.use arg
     cb null, 'Using: ' + args.join(', ')
+
+builtins.alias = (inp, args, ctx, cb) ->
+    ctx.alias args[0], args[1]
+    cb null, success: true
