@@ -5,9 +5,9 @@ util = require 'util'
 _inspect = (o) -> util.inspect o, depth: null
 inspect = (o) -> console.log _inspect o
 
-#
+# ======================
 # INPUT DATA
-#
+# ======================
 
 test_input = [
     name: 'bill',
@@ -32,9 +32,9 @@ ctx = pipeline.createContext
 
 ctx.use 'keywords' # for slugify
 
-#
+# ======================
 # TESTS
-#
+# ======================
 
 tests = {}
 
@@ -107,11 +107,18 @@ tests.obj_vars =
     cmd: """ fred = obj name fred ; echo $( $fred @ name ) """
     expected: [{name: 'fred'}, 'fred']
 
-# Test
+# Test aliases 
+tests.set_alias =
+    cmd: """ alias sayhi = echo "hello there" """
+    expected:
+        success: true
+tests.use_alias =
+    cmd: """ sayhi """
+    expected: 'hello there'
 
-#
+# ======================
 # EXECUTION
-#
+# ======================
 
 # Print out the parsed command tree
 showParsed = (cmd) ->
