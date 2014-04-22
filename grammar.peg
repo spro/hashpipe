@@ -65,10 +65,12 @@ number = s:"-"? ds:[0-9]+ { n = Number(ds.join('')); if (s) n = n*-1; return n; 
 ok_char = letter / [=:/.,#%!?'+*%^&{}\[\]]
 escd_at = (letter "@" cmd_char / "\\@") { return "@"; }
 escd_paren = "\\(" { return "("; } / "\\)" { return ")"; }
+escd_dolla = "\\$"
+escd_char = escd_at / escd_paren / escd_dolla
 letter_word = ls:letter+ { return ls.join(''); }
 var_word = "$" w:letter_word { return '$' + w; }
     / "$!"
-cmd_char = ok_char / escd_at / escd_paren / var_word
+cmd_char = escd_char / ok_char / var_word
 cmd_word = cs:cmd_char+ { return cs.join('').trim(); }
 quoted_cmd = quote cmd:cmd quote { return {quoted: cmd}; }
 quoted_literal = quote_ ls:(" " / cmd_char / "\\n" { return '\n'; })* _quote { return {quoted: [ls.join('')] }; }
@@ -83,6 +85,8 @@ cmd_at =
     cmd:cmd
     atexp:(at atexp:at_expression { return atexp; })?
     { return {cmd: cmd, at: atexp}; }
+    / atexp:(at atexp:at_expression { return atexp; })
+    { return {at: atexp}; }
 
 var_exp =
     var_word:var_word
@@ -115,6 +119,7 @@ sub_cmd =
     }
 
 pipeline =
+    aliasing / setting /
     space
     head:(at atexp:at_expression { return {at: atexp}; })?
     tail:cmd_section*
@@ -123,14 +128,14 @@ pipeline =
 
 semi = space ";" space
 pipelines =
-    head:(aliasing / setting / pipeline)
+    head:pipeline
     tail:(semi pipeline:pipeline { return pipeline; })*
     { return [head].concat(tail); }
 
 setup = var_word:letter_word space "=" space { return var_word; }
 
 aliasing =
-    space "alias" space alias:letter_word space "=" space rest:.+
+    space "alias" space alias:letter_word space "=" space rest:[^;]+
     { return [{cmd: ['alias', alias, rest.join('').trim()]}]; }
 
 setting =
