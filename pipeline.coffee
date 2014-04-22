@@ -85,6 +85,9 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
             console.log 'parsing args for ' + _inspect inp
             console.log ':::> ' + _inspect args
 
+        if cmd_args[0] == 'alias'
+            return cb null, args
+
         replaceArg = (arg, _cb) ->
             if _.isObject arg
                 if arg.sub?
@@ -95,10 +98,15 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
             else if _.isString(arg)
                 if arg == '$!'
                     arg = inp
+                # Full replacement
                 else if $key = arg.match /^\$[a-zA-Z0-9_-]+$/
                     $key = $key[0]
                     key = $key.slice(1)
                     arg = ctx.env[key]
+                # Non replacement (escaped)
+                else if $key = arg.match /\\\$[a-zA-Z0-9_-]*$/
+                    arg = $key[0].slice(1)
+                # Within string replacement
                 else if $key = arg.match /\$[a-zA-Z0-9_-]+/
                     $key = $key[0]
                     key = $key.slice(1)
@@ -111,7 +119,12 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
     # Apply an at expression at the end
     applyAt = (data, cb) ->
         if cmd_token.at?
-            at data, cmd_token.at, ctx, cb
+            if cmd_type in ['ppipe', 'spipe']
+                _at = (_data, _cb) ->
+                    at _data, cmd_token.at, ctx, _cb
+                async.map data, _at, cb
+            else
+                at data, cmd_token.at, ctx, cb
         else
             cb null, data
 
@@ -131,6 +144,7 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
 
     # Parallel if ppiped
     if cmd_type == 'ppipe'
+        console.log('PPIPE: ' + _inspect cmd_args) if DEBUG
         tasks = inp.map (_inp) ->
             (_cb) ->
                 parseArgs _inp, cmd_args, (err, args) ->
@@ -139,6 +153,7 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
 
     # Series if spiped
     else if cmd_type == 'spipe'
+        console.log('SPIPE: ' + _inspect cmd_args) if DEBUG
         tasks = inp.map (_inp) ->
             (_cb) ->
                 parseArgs _inp, cmd_args, (err, args) ->
@@ -147,11 +162,13 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
 
     # Callback value if $val
     else if cmd_token.val?
+        console.log('VAL: ' + _inspect cmd_args) if DEBUG
         parseArgs inp, [cmd_token.val], (err, parsed) ->
             cb null, parsed[0]
 
     # Callback value if $var
     else if cmd_token.var?
+        console.log('VAR: ' + _inspect cmd_args) if DEBUG
         $key = cmd_token.var
         if $key == '$!'
             val = inp
@@ -162,6 +179,7 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
 
     # Just execute if single piped
     else
+        console.log('PIPE: ' + _inspect cmd_args) if DEBUG
         parseArgs inp, cmd_args, (err, args) ->
             doCmd args, inp, ctx, cb
 
@@ -214,7 +232,7 @@ descendObj = (_obj, _expr, ctx, final_cb) ->
     if DEBUG
         console.log "\n/ - - ~ @ ~ - - \\"
         inspect obj
-        console.log "== @ ==> "
+        console.log "      == @ ==> "
         inspect step
         console.log "\\ - - ~ @ ~ - - /\n"
 
