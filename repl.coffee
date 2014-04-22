@@ -1,13 +1,12 @@
 readline = require 'readline'
 pipeline = require './pipeline'
 builtins = require './builtins'
-config = require '../gofish/config'
 
 # Import default modules
 
 ctx = pipeline.createContext(env: hi: name: 'fred')
-    .use(require('./modules/mongo').connect(config.mongo))
-    .use(require('./modules/redis').connect(config.redis))
+    .use(require('./modules/mongo').connect())
+    .use(require('./modules/redis').connect())
     .use('http')
     .use('html')
     .use('files')
@@ -23,7 +22,7 @@ rl = readline.createInterface
     input: process.stdin
     output: process.stdout
     completer: fnCompleter
-rl.setPrompt '> '
+rl.setPrompt 'Q > '
 rl.prompt()
 
 last_out = null
