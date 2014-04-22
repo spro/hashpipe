@@ -107,7 +107,7 @@ tests.obj_vars =
     cmd: """ fred = obj name fred ; echo $( $fred @ name ) """
     expected: [{name: 'fred'}, 'fred']
 
-# Test aliases 
+# Setting and using aliases
 tests.set_alias =
     cmd: """ alias sayhi = echo "hello there" """
     expected:
@@ -115,6 +115,11 @@ tests.set_alias =
 tests.use_alias =
     cmd: """ sayhi """
     expected: 'hello there'
+
+# Parallel piping and @ing within
+tests.test_ppipe =
+    cmd: """ range 25 || obj id $! || id @ id """
+    expected: [0..24]
 
 # ======================
 # EXECUTION
