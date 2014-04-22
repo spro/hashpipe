@@ -5,8 +5,8 @@ exports.connect = (config) ->
 
     locals.db = null
     _db = new mongodb.Db(
-        config.db,
-        mongodb.Server(config.host, 27017),
+        config?.db || 'qnectar',
+        mongodb.Server(config?.host || 'localhost', 27017),
         safe: true
     )
     _db.open (err, db) -> locals.db = db
