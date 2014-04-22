@@ -1,5 +1,7 @@
 fs = require 'fs'
 _ = require 'underscore'
+util = require 'util'
+_inspect = (o) -> util.inspect o, depth: null
 
 module.exports = builtins = {}
 
@@ -9,12 +11,23 @@ valid = (i) ->
         return (i.length > 0)
     if _.isObject i
         return (_.keys(i).length > 0)
-    return i
+    if _.isString i
+        return (i.length > 0)
+    return i?
 combine = (inp, args) -> _.flatten([inp].concat(args)).filter valid
 
 # Arithmetic
 
 num = (n) -> Number(n) || 0
+
+bool = (v) ->
+    if _.isString v
+        return false if v == 'false'
+        return true if v == 'true'
+    else if v
+        return true
+    else
+        return false
 
 reducer = (f) ->
     (inp, args, ctx, cb) ->
@@ -48,6 +61,10 @@ builtins.key = (inp, args, ctx, cb) -> cb null, args.join('')
 # val -> num -> #val
 builtins.num = (inp, args, ctx, cb) -> cb null, num inp
 
+# `bool` coerces input into a boolean
+# val -> bool -> val?
+builtins.bool = (inp, args, ctx, cb) -> cb null, bool inp
+
 # Building objects and arrays
 
 # list val val val -> [val, val, val]
@@ -62,6 +79,9 @@ builtins.obj = (inp, args, ctx, cb) ->
             abj[args[i]] = args[i+1]
             i+=2
     cb null, abj
+
+builtins.extend = (inp, args, ctx, cb) ->
+    cb null, _.extend inp, args[0]
 
 # range #start? #stop -> [#i]
 builtins.range = (inp, args, ctx, cb) ->
@@ -81,7 +101,8 @@ builtins.head = (inp, args, ctx, cb) -> cb null, inp[..args[0]||50]
 builtins.tail = (inp, args, ctx, cb) -> cb null, inp[inp.length-(args[0]||50)..]
 builtins.join = (inp, args, ctx, cb) -> cb null, inp.join args[0] || ' '
 builtins.split = (inp, args, ctx, cb) -> cb null, inp.split(args[0] || '\n')
-builtins.unique = (inp, args, ctx, cb) -> cb null, _.uniq inp
+builtins.uniq = (inp, args, ctx, cb) -> cb null, _.uniq inp
+builtins.flatten = (inp, args, ctx, cb) -> cb null, _.flatten inp
 
 builtins.sleep = (inp, args, ctx, cb) -> setTimeout cb, Number args[0]
 
@@ -140,11 +161,19 @@ builtins.filter = (inp, args, ctx, cb) ->
     cb null, filtered_inp
 
 builtins.tee = (inp, args, ctx, cb) ->
-    console.log inp
     cb null, inp
 
 builtins.parse = (inp, args, ctx, cb) ->
     cb null, JSON.parse inp
+
+builtins.log = (inp, args, ctx, cb) ->
+    console.log args.join ' '
+    cb null, inp
+
+builtins.inspect = (inp, args, ctx, cb) ->
+    console.log 'inp: ' + _inspect inp
+    console.log 'args: ' + _inspect args
+    cb null, inp
 
 builtins.stringify = (inp, args, ctx, cb) ->
     cb null, JSON.stringify inp
