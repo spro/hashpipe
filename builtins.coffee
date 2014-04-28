@@ -80,6 +80,7 @@ builtins.obj = (inp, args, ctx, cb) ->
             i+=2
     cb null, abj
 
+# Attach values of one object onto another
 builtins.extend = (inp, args, ctx, cb) ->
     cb null, _.extend inp, args[0]
 
@@ -201,6 +202,9 @@ builtins.sort = (inp, args, ctx, cb) ->
     else
         cb null, inp.sort()
 
+builtins.now = (inp, args, ctx, cb) -> cb null, new Date
+builtins.timestamp = (inp, args, ctx, cb) -> cb null, new Date().getTime()
+
 # Including modules
 
 builtins.use = (inp, args, ctx, cb) ->
@@ -209,5 +213,16 @@ builtins.use = (inp, args, ctx, cb) ->
     cb null, 'Using: ' + args.join(', ')
 
 builtins.alias = (inp, args, ctx, cb) ->
-    ctx.alias args[0], args[1]
-    cb null, success: true
+    alias = args[0]
+    pipeline = args[1]
+    if !pipeline
+        # Showing an alias
+        cb null, ctx.env.aliases[alias]
+    else
+        # Setting an alias
+        ctx.alias alias, pipeline
+        cb null,
+            success: true
+            alias: alias
+            pipeline: pipeline
+

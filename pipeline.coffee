@@ -14,10 +14,17 @@ inspect = (o) -> console.log _inspect o
 # Create a context that can be extended with `.use`
 
 class Context
+
     constructor: (init={}) ->
         _.extend @, init
         @fns = {} if !@fns?
         @env = {} if !@env?
+        if !@env.aliases
+            @env.aliases = {}
+        else
+            for a, p in @env.aliases
+                alias a, p
+
     use: (fns) ->
         # Module name
         if _.isString fns
@@ -28,10 +35,14 @@ class Context
         else if _.isObject fns
             _.extend @fns, fns
         return @ # for chaining
-    alias: (n, p) ->
-        @fns[n] = through p
+
     lookup: (cmd) ->
         @fns[cmd] || builtins[cmd]
+
+    alias: (a, p) ->
+        @env.aliases[a] = p
+        @fns[a] = through p
+
 createContext = (init={}) ->
     return new Context init
 
