@@ -73,7 +73,7 @@ var_word = "$" w:letter_word { return '$' + w; }
 cmd_char = escd_char / ok_char / var_word
 cmd_word = cs:cmd_char+ { return cs.join('').trim(); }
 quoted_cmd = quote cmd:cmd quote { return {quoted: cmd}; }
-quoted_literal = quote_ ls:(" " / cmd_char / "\\n" { return '\n'; })* _quote { return {quoted: [ls.join('')] }; }
+quoted_literal = quote_ ls:("\\n" { return '\n'; } / escd_char / [^"] )* _quote { return {quoted: [ls.join('')] }; }
 quoted_phrase = quoted_literal / quoted_cmd
 cmd_phrase = quoted_phrase / cmd_word / sub_cmd 
 
