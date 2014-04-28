@@ -14,7 +14,7 @@ inspect = (o) -> console.log _inspect o
 # Create a context that can be extended with `.use`
 
 class Context
-    constructor: (init) ->
+    constructor: (init={}) ->
         _.extend @, init
         @fns = {} if !@fns?
         @env = {} if !@env?
@@ -30,6 +30,8 @@ class Context
         return @ # for chaining
     alias: (n, p) ->
         @fns[n] = through p
+    lookup: (cmd) ->
+        @fns[cmd] || builtins[cmd]
 createContext = (init={}) ->
     return new Context init
 
@@ -194,7 +196,7 @@ doCmd = (_args, inp, ctx, cb) ->
         console.log '###################\n'
     args = _.clone _args
     cmd = args.shift()
-    if fn = ctx.fns[cmd] || builtins[cmd]
+    if fn = ctx.lookup cmd
         fn(inp, args, ctx, cb)
     else
         cb "No command #{ cmd }. "
@@ -319,6 +321,7 @@ at = (inp, expr, ctx, cb) ->
     descendObj inp, expr, ctx, cb
 
 module.exports =
+    Context: Context
     createContext: createContext
     execPipelines: execPipelines
     parsePipelines: parsePipelines
