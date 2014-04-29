@@ -214,15 +214,15 @@ builtins.use = (inp, args, ctx, cb) ->
 
 builtins.alias = (inp, args, ctx, cb) ->
     alias = args[0]
-    pipeline = args[1]
-    if !pipeline
+    script = args[1]
+    if !script
         # Showing an alias
         cb null, ctx.env.aliases[alias]
     else
         # Setting an alias
-        ctx.alias alias, pipeline
+        ctx.alias alias, script
         cb null,
             success: true
             alias: alias
-            pipeline: pipeline
+            script: script
 
