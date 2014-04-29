@@ -324,8 +324,12 @@ accessor = (obj, key) ->
                 return obj.slice(key)[0]
         return obj[key]
 
+# create a command out of a script
 through = (cmd) -> (inp, args, ctx, cb) ->
-    execPipelines cmd, inp, ctx, cb
+    pipeline = parsePipelines(cmd)[0]
+    if pipeline[0].cmd?
+        pipeline[0].cmd.push args...
+    runPipeline pipeline, inp, ctx, cb
 
 # Read in an at expression
 at = (inp, expr, ctx, cb) ->
