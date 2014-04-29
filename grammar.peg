@@ -63,7 +63,7 @@ _quote = ["'] space
 
 number = s:"-"? ds:[0-9]+ { n = Number(ds.join('')); if (s) n = n*-1; return n; }
 ok_char = letter / [=:/.,#%!?'+*%^&{}\[\]]
-escd_at = (letter "@" cmd_char / "\\@") { return "@"; }
+escd_at = (l1:letter "@" l2:letter { return l1+'@'+l2; } / "\\@" { return "@"; })
 escd_paren = "\\(" { return "("; } / "\\)" { return ")"; }
 escd_dolla = "\\$"
 escd_char = escd_at / escd_paren / escd_dolla
