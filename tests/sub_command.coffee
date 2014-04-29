@@ -112,6 +112,8 @@ tests.set_alias =
     cmd: """ alias sayhi = echo "hello there" """
     expected:
         success: true
+        alias: 'sayhi'
+        script: 'echo "hello there"'
 tests.use_alias =
     cmd: """ sayhi """
     expected: 'hello there'
