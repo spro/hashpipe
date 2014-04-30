@@ -94,6 +94,14 @@ builtins.range = (inp, args, ctx, cb) ->
         i1 = num(args[0]) - 1
     cb null, [i0 .. i1]
 
+# {obj} -> keys -> [keys]
+builtins.keys = (inp, args, ctx, cb) ->
+    cb null, _.keys inp
+
+# {obj} -> values -> [values]
+builtins.values = (inp, args, ctx, cb) ->
+    cb null, _.values inp
+
 # List operations
 
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
@@ -204,6 +212,13 @@ builtins.sort = (inp, args, ctx, cb) ->
 
 builtins.now = (inp, args, ctx, cb) -> cb null, new Date
 builtins.timestamp = (inp, args, ctx, cb) -> cb null, new Date().getTime()
+
+randomString = (len=5) ->
+    s = ''
+    while s.length < len
+        s += Math.random().toString(36).slice(2, len-s.length+2)
+    return s
+builtins.randstr = (inp, args, ctx, cb) -> cb null, randomString args[0]
 
 # Including modules
 
