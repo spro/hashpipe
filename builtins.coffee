@@ -189,13 +189,19 @@ builtins.stringify = (inp, args, ctx, cb) ->
 
 builtins.count = (inp, args, ctx, cb) ->
     counts = {}
+    ki = {}
+    if args[0]?
+        ik = (i) -> i[args[0]]
+    else
+        ik = (i) -> i
     for i in inp
-        counts[i] = 0 if not counts[i]?
-        counts[i] += 1
+        counts[ik i] = 0 if not counts[ik i]?
+        counts[ik i] += 1
+        ki[ik i] = i
     counts_list = []
     for k, v of counts
         counts_list.push
-            item: k
+            item: ki[k]
             count: v
     counts_list.sort (a, b) -> a.count - b.count
     cb null, counts_list
