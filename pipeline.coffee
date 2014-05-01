@@ -1,6 +1,7 @@
 parser = require './parser'
 builtins = require './builtins'
 async = require 'async'
+fs = require 'fs'
 util = require 'util'
 _ = require 'underscore'
 
@@ -46,6 +47,23 @@ class Context
 createContext = (init={}) ->
     return new Context init
 
+class Pipeline
+
+    constructor: (init={}) ->
+        @context = createContext init
+        @
+
+    use: ->
+        @context.use arguments; @
+
+    alias: ->
+        @context.alias arguments; @
+
+    load: (script_filename, inp, cb) ->
+        script = fs.readFileSync(script_filename).toString()
+        execPipelines script, inp, @context, cb
+        @
+
 # Execute a pipeline given a command string, input object,
 # context and callback. An empty context object is created
 # if none is given.
@@ -79,7 +97,8 @@ runPipelines = (pipelines, inp, ctx, cb) ->
     if pipelines.length > 1
         _runPipeline = (_pipeline, _cb) ->
             runPipeline _pipeline, inp, ctx, _cb
-        async.mapSeries pipelines, _runPipeline, cb
+        async.mapSeries pipelines, _runPipeline, (err, results) ->
+            cb null, results.slice(-1)[0]
     else runPipeline pipelines[0], inp, ctx, cb
 
 runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
@@ -339,6 +358,7 @@ at = (inp, expr, ctx, cb) ->
     descendObj inp, expr, ctx, cb
 
 module.exports =
+    Pipeline: Pipeline
     Context: Context
     createContext: createContext
     execPipelines: execPipelines
