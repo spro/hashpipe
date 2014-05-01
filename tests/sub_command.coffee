@@ -100,12 +100,12 @@ tests.escd_quoted =
 # Test variables
 tests.vars =
     cmd: """ frank = 5 ; echo $frank """
-    expected: [5, '5']
+    expected: '5'
 
 # Test object variables, variable @-expressions, `;` separated results
 tests.obj_vars =
     cmd: """ fred = obj name fred ; echo $( $fred @ name ) """
-    expected: [{name: 'fred'}, 'fred']
+    expected: 'fred'
 
 # Setting and using aliases
 tests.set_alias =
