@@ -7,8 +7,8 @@ fs = require 'fs'
 
 # Import default modules
 
-ctx = pipeline.createContext(env: hi: name: 'fred')
-    .use(require('./modules/mongo').connect(db: 'gofish'))
+ctx = pipeline.createContext()
+    .use(require('./modules/mongo').connect())
     .use(require('./modules/redis').connect())
     .use('http')
     .use('html')

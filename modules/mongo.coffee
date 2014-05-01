@@ -12,23 +12,33 @@ fixQueryIds = (query) ->
 exports.connect = (config) ->
 
     locals.db = null
-    _db = new mongodb.Db(
+    new mongodb.Db(
         config?.db || 'qnectar',
         mongodb.Server(config?.host || 'localhost', 27017),
         safe: true
-    )
-    _db.open (err, db) -> locals.db = db
+    ).open (err, db) -> locals.db = db
 
     fns =
 
         mongo: (inp, args, ctx, cb) ->
-            collection = args[0]
-            command = args[1] || 'count'
+            command = args[0]
+            collection = args[1]
             query = args[2] || {}
-            query = fixQueryIds query
             options = args[3] || {}
-            if command == 'find'
+
+            query = fixQueryIds query
+
+            if command == 'use'
+                new mongodb.Db(
+                    args[1],
+                    mongodb.Server(config?.host || 'localhost', 27017),
+                    safe: true
+                ).open (err, db) -> locals.db = db
+                cb null, success: true
+
+            else if command == 'find'
                 locals.db.collection(collection)[command](query, options).toArray cb
+
             else
                 locals.db.collection(collection)[command](query, options, cb)
 
