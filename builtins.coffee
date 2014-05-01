@@ -117,9 +117,11 @@ builtins.sleep = (inp, args, ctx, cb) -> setTimeout cb, Number args[0]
 
 # Environmental parasites
 
-builtins.let = (inp, args, ctx, cb) ->
-    ctx.env[args[0]] = args[1]
-    cb null, ctx.env[args[0]]
+builtins.set = (inp, args, ctx, cb) ->
+    data = args[1] || inp
+    console.log "[set] Setting #{ args[0] } to #{ data }"
+    ctx.env[args[0]] = data
+    cb null, data
 
 # `inc` increments a number given a key
 builtins.inc = (inp, args, ctx, cb) ->

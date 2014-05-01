@@ -140,5 +140,5 @@ aliasing =
 
 setting =
     space set:setup pipeline:pipeline
-    { return [{cmd: ['let', set, {sub: [pipeline]}]}]; }
+    { return [{cmd: ['set', set, {sub: [pipeline]}]}]; }
 
