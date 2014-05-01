@@ -187,6 +187,16 @@ builtins.inspect = (inp, args, ctx, cb) ->
 builtins.stringify = (inp, args, ctx, cb) ->
     cb null, JSON.stringify inp
 
+builtins.sort = (inp, args, ctx, cb) ->
+    if sort_by = args[0]
+        if sort_by[0] == '-'
+            sort_by = sort_by[1..]
+            cb null, inp.sort (a, b) -> b[sort_by] - a[sort_by]
+        else
+            cb null, inp.sort (a, b) -> a[sort_by] - b[sort_by]
+    else
+        cb null, inp.sort()
+
 builtins.count = (inp, args, ctx, cb) ->
     counts = {}
     ki = {}
@@ -206,15 +216,42 @@ builtins.count = (inp, args, ctx, cb) ->
     counts_list.sort (a, b) -> a.count - b.count
     cb null, counts_list
 
-builtins.sort = (inp, args, ctx, cb) ->
-    if sort_by = args[0]
-        if sort_by[0] == '-'
-            sort_by = sort_by[1..]
-            cb null, inp.sort (a, b) -> b[sort_by] - a[sort_by]
-        else
-            cb null, inp.sort (a, b) -> a[sort_by] - b[sort_by]
+builtins.bin = (inp, args, ctx, cb) ->
+    count = Number args[0]
+    key = args[1]
+
+    ki = {}
+    if key?
+        ik = (i) -> i[key]
     else
-        cb null, inp.sort()
+        ik = (i) -> i
+
+    min = null
+    max = null
+    bins = []
+
+    for item in inp
+        k = ik item
+        if !min? || k < min
+            min = k
+        if !max? || k > max
+            max = k + 0.000000001
+
+    interval = ( max - min ) / count
+    
+    for i in [0..count-1]
+        bins.push
+            start: i * interval
+            end: ( i + 1 ) * interval
+            count: 0
+            items: []
+
+    for item in inp
+        bi = Math.floor( ( (ik item) - min ) / interval )
+        bins[bi].items.push item
+        bins[bi].count += 1
+
+    cb null, bins
 
 builtins.now = (inp, args, ctx, cb) -> cb null, new Date
 builtins.timestamp = (inp, args, ctx, cb) -> cb null, new Date().getTime()
