@@ -112,7 +112,7 @@ builtins.values = (inp, args, ctx, cb) ->
 
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
 builtins.reverse = (inp, args, ctx, cb) -> cb null, inp.reverse()
-builtins.head = (inp, args, ctx, cb) -> cb null, inp[..args[0]||50]
+builtins.head = (inp, args, ctx, cb) -> cb null, inp[..(args[0]||50)-1]
 builtins.tail = (inp, args, ctx, cb) ->
     count = args[0]
     count = 50 if !count?
