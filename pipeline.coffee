@@ -133,6 +133,9 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
             else if _.isString(arg)
                 if arg == '$!'
                     arg = inp
+                # Int replacement
+                else if $key = arg.match /^-?[0-9]+$/
+                    arg = parseInt arg
                 # Full replacement
                 else if $key = arg.match /^\$[a-zA-Z0-9_-]+$/
                     $key = $key[0]
