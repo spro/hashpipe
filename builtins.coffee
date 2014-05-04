@@ -113,7 +113,8 @@ builtins.split = (inp, args, ctx, cb) -> cb null, inp.split(args[0] || '\n')
 builtins.uniq = (inp, args, ctx, cb) -> cb null, _.uniq inp
 builtins.flatten = (inp, args, ctx, cb) -> cb null, _.flatten inp
 
-builtins.sleep = (inp, args, ctx, cb) -> setTimeout cb, Number args[0]
+builtins.sleep = (inp, args, ctx, cb) ->
+    setTimeout (-> cb null, inp), Number args[0]
 
 # Environmental parasites
 
