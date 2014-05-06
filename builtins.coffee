@@ -119,8 +119,8 @@ builtins.sleep = (inp, args, ctx, cb) -> setTimeout cb, Number args[0]
 
 builtins.set = (inp, args, ctx, cb) ->
     data = args[1] || inp
-    console.log "[set] Setting #{ args[0] } to #{ data }"
-    ctx.env[args[0]] = data
+    console.log 'une set?'
+    ctx.set 'vars', args[0], data
     cb null, data
 
 # `inc` increments a number given a key
@@ -277,7 +277,7 @@ builtins.alias = (inp, args, ctx, cb) ->
     script = args[1]
     if !script
         # Showing an alias
-        cb null, ctx.env.aliases[alias]
+        cb null, ctx.aliases[alias]
     else
         # Setting an alias
         ctx.alias alias, script
