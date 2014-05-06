@@ -11,6 +11,7 @@ exports['cat-stream'] = (inp, args, ctx, cb) ->
 
 # "file" -> write "filename" -> "file"
 exports.write = (inp, args, ctx, cb) ->
+    console.log "Writing type #{ typeof inp } of length #{ inp.length }"
     fs.writeFile args[0], inp, (err) ->
         cb null, inp
 
