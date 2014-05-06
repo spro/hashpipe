@@ -1,29 +1,10 @@
 # pipeline
 
-A DSL for asynchronous command pipelines.
+Pipeline is a DSL (and REPL) for traversing and manipulating JSON objects in a Unixy manner.
 
-## *A taste of nectar*
+In action:
 
-**input** &rarr; 
-
-```js
-[ { name: "bill", dogs: 
-    [ { name: "sparky", age: 58 }, { name: "woofer", age: 6 } ] },
-  { name: "fred", dogs: [] } ]
-```
-
-&rarr; **pipeline** &rarr;
-
-```js
-> id @ :{ name, dog_years: $( @ dogs:age | + 0) }
-```
-
-&rarr; **output**
-
-```js
-[ { name: "bill", dog_years: 64 },
-  { name: "fred", dog_years: 0 } ]
-```
+![](/docs/preview.png)
 
 ---
 
@@ -70,7 +51,7 @@ This of course can be extended as far into the object as necessary, e.g. to get 
 To access one key of an array of objects, we can use the `:` or *map* operator. The map operator applies an accessor to each item of an array.
 
 ```
-> dog_people @ :name
+> dog_people @ :dog
 ```
 
 ```js
