@@ -1,4 +1,4 @@
-pipeline = require '../pipeline'
+{Pipeline, parsePipelines} = require '../pipeline'
 tape = require 'tape'
 util = require 'util'
 
@@ -23,14 +23,15 @@ test_input = [
     dogs: []
 ]
 
-ctx = pipeline.createContext
-    env:
+pipe = new Pipeline()
+    .use 'keywords' # for slugify
+
+test_ctx = pipe.subScope
+    vars:
         hi: 'hello'
         cheese: 'fromage'
         george:
             name: 'Gregory'
-
-ctx.use 'keywords' # for slugify
 
 # ======================
 # TESTS
@@ -100,12 +101,12 @@ tests.escd_quoted =
 # Test variables
 tests.vars =
     cmd: """ frank = 5 ; echo $frank """
-    expected: [5, '5']
+    expected: '5'
 
 # Test object variables, variable @-expressions, `;` separated results
 tests.obj_vars =
     cmd: """ fred = obj name fred ; echo $( $fred @ name ) """
-    expected: [{name: 'fred'}, 'fred']
+    expected: 'fred'
 
 # Setting and using aliases
 tests.set_alias =
@@ -132,7 +133,7 @@ showParsed = (cmd) ->
 
     console.log '\n~~~~~'
     console.log cmd + ' ->\n'
-    inspect pipeline.parsePipelines cmd
+    inspect parsePipelines cmd
     console.log '~~~~~\n'
 
 # Run a test
@@ -141,7 +142,7 @@ runTest = (test_name) ->
     tape test_name, (t) ->
 
         showParsed tests[test_name].cmd
-        pipeline.execPipelines tests[test_name].cmd, test_input, ctx, (err, test_result) ->
+        pipe.exec tests[test_name].cmd, test_input, test_ctx, (err, test_result) ->
 
             t.deepLooseEqual test_result, tests[test_name].expected, 'Meets expectations.'
             t.end()

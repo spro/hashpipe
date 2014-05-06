@@ -24,10 +24,10 @@ bool = (v) ->
     if _.isString v
         return false if v == 'false'
         return true if v == 'true'
-    else if v
-        return true
     else
-        return false
+        return !!v
+
+exists = (v) -> v?
 
 reducer = (f) ->
     (inp, args, ctx, cb) ->
@@ -64,6 +64,12 @@ builtins.num = (inp, args, ctx, cb) -> cb null, num inp
 # `bool` coerces input into a boolean
 # val -> bool -> val?
 builtins.bool = (inp, args, ctx, cb) -> cb null, bool inp
+
+builtins.if = (inp, args, ctx, cb) ->
+    if args[0]
+        cb null, args[1]
+    else
+        cb()
 
 # Building objects and arrays
 
@@ -106,8 +112,14 @@ builtins.values = (inp, args, ctx, cb) ->
 
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
 builtins.reverse = (inp, args, ctx, cb) -> cb null, inp.reverse()
-builtins.head = (inp, args, ctx, cb) -> cb null, inp[..args[0]||50]
-builtins.tail = (inp, args, ctx, cb) -> cb null, inp[inp.length-(args[0]||50)..]
+builtins.head = (inp, args, ctx, cb) -> cb null, inp[..(args[0]||50)-1]
+builtins.tail = (inp, args, ctx, cb) ->
+    count = args[0]
+    count = 50 if !count?
+    if count < 1
+        cb null, []
+    else
+        cb null, inp[inp.length-count..]
 builtins.join = (inp, args, ctx, cb) -> cb null, inp.join args[0] || ' '
 builtins.split = (inp, args, ctx, cb) -> cb null, inp.split(args[0] || '\n')
 builtins.uniq = (inp, args, ctx, cb) -> cb null, _.uniq inp
@@ -118,9 +130,11 @@ builtins.sleep = (inp, args, ctx, cb) ->
 
 # Environmental parasites
 
-builtins.let = (inp, args, ctx, cb) ->
-    ctx.env[args[0]] = args[1]
-    cb null, ctx.env[args[0]]
+builtins.set = (inp, args, ctx, cb) ->
+    data = args[1] || inp
+    console.log 'une set?'
+    ctx.set 'vars', args[0], data
+    cb null, data
 
 # `inc` increments a number given a key
 builtins.inc = (inp, args, ctx, cb) ->
@@ -276,7 +290,7 @@ builtins.alias = (inp, args, ctx, cb) ->
     script = args[1]
     if !script
         # Showing an alias
-        cb null, ctx.env.aliases[alias]
+        cb null, ctx.aliases[alias]
     else
         # Setting an alias
         ctx.alias alias, script
