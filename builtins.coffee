@@ -130,9 +130,11 @@ builtins.sleep = (inp, args, ctx, cb) ->
 
 # Environmental parasites
 
-builtins.let = (inp, args, ctx, cb) ->
-    ctx.env[args[0]] = args[1]
-    cb null, ctx.env[args[0]]
+builtins.set = (inp, args, ctx, cb) ->
+    data = args[1] || inp
+    console.log 'une set?'
+    ctx.set 'vars', args[0], data
+    cb null, data
 
 # `inc` increments a number given a key
 builtins.inc = (inp, args, ctx, cb) ->
@@ -294,7 +296,7 @@ builtins.alias = (inp, args, ctx, cb) ->
     script = args[1]
     if !script
         # Showing an alias
-        cb null, ctx.env.aliases[alias]
+        cb null, ctx.aliases[alias]
     else
         # Setting an alias
         ctx.alias alias, script

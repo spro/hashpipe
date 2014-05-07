@@ -1,6 +1,7 @@
 parser = require './parser'
 builtins = require './builtins'
 async = require 'async'
+fs = require 'fs'
 util = require 'util'
 _ = require 'underscore'
 
@@ -13,55 +14,76 @@ inspect = (o) -> console.log _inspect o
 
 # Create a context that can be extended with `.use`
 
-class Context
+class Scope
 
     constructor: (init={}) ->
         _.extend @, init
-        @fns = {} if !@fns?
-        @env = {} if !@env?
-        if !@env.aliases
-            @env.aliases = {}
-        else
-            for a, p in @env.aliases
-                alias a, p
+
+    set: (t, k, v) ->
+        if DEBUG
+            console.log "[Scope set] Setting #{ t } #{ k } to #{ v }"
+        @[t] = {} if !@[t]?
+        @[t][k] = v
+
+    get: (t, k) ->
+        if DEBUG
+            console.log "[Scope get] Getting #{ t } #{ k }"
+        @[t]?[k] || @parent?.get t, k
+
+    alias: (a, s) ->
+        @set 'fns', a, through s
+        @set 'aliases', a, s
+
+    subScope: (init={})->
+        init.parent = @
+        return new Scope init
+
+class Context extends Scope
+
+
+class Pipeline extends Scope
 
     use: (fns) ->
         # Module name
         if _.isString fns
             if fns.match /^\w/
                 fns = './modules/' + fns
-            _.extend @fns, require(fns)
+            for k, v of require(fns)
+                @set 'fns', k, v
         # Object of functions
         else if _.isObject fns
-            _.extend @fns, fns
+            for k, v of fns
+                @set 'fns', k, v
         return @ # for chaining
 
-    lookup: (cmd) ->
-        @fns[cmd] || builtins[cmd]
+    # Execute a pipeline given a command string, input object,
+    # context and callback. An empty context object is created
+    # if none is given.
 
-    alias: (a, p) ->
-        @env.aliases[a] = p
-        @fns[a] = through p
+    # exec script, cb
+    # exec script, inp, cb
+    # exec script, inp, ctx, cb
 
-createContext = (init={}) ->
-    return new Context init
+    exec: (script, inp, ctx, cb) ->
+        if !cb?
+            cb = ctx
+            ctx = @subScope()
+        if !cb?
+            cb = inp
+            inp = null
+        try
+            pipelines = parsePipelines(script)
+        catch e
+            cb "Error parsing pipeline: " + e
+        try
+            runPipelines pipelines, inp, ctx, cb
+        catch e
+            cb "Error executing pipeline: " + e
+        return ctx
 
-# Execute a pipeline given a command string, input object,
-# context and callback. An empty context object is created
-# if none is given.
-
-execPipelines = (cmd, inp, ctx, cb) ->
-    if !cb?
-        cb = ctx
-        ctx = createContext()
-    try
-        pipelines = parsePipelines(cmd)
-    catch e
-        cb "Error parsing pipeline: " + e
-    try
-        runPipelines pipelines, inp, ctx, cb
-    catch e
-        cb "Error running pipeline: " + e
+    execFile: (script_filename, inp, cb) ->
+        script = fs.readFileSync(script_filename).toString()
+        @exec script, inp, cb
 
 # Parse a command pipeline into a series of tokens
 # that can be passed to `runPipeline`
@@ -82,7 +104,8 @@ runPipelines = (pipelines, inp, ctx, cb) ->
     if pipelines.length > 1
         _runPipeline = (_pipeline, _cb) ->
             runPipeline _pipeline, inp, ctx, _cb
-        async.mapSeries pipelines, _runPipeline, cb
+        async.mapSeries pipelines, _runPipeline, (err, results) ->
+            cb null, results.slice(-1)[0]
     else runPipeline pipelines[0], inp, ctx, cb
 
 runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
@@ -124,7 +147,7 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
                 else if $key = arg.match /^\$[a-zA-Z0-9_-]+$/
                     $key = $key[0]
                     key = $key.slice(1)
-                    arg = ctx.env[key]
+                    arg = ctx.get 'vars', key
                 # Non replacement (escaped)
                 else if $key = arg.match /\\\$[a-zA-Z0-9_-]*$/
                     arg = $key[0].slice(1)
@@ -132,7 +155,7 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
                 else if $key = arg.match /\$[a-zA-Z0-9_-]+/
                     $key = $key[0]
                     key = $key.slice(1)
-                    arg = arg.replace $key, ctx.env[key]
+                    arg = arg.replace $key, ctx.get 'vars', key
             _cb null, arg
 
         async.map args, replaceArg, (err, new_args) ->
@@ -182,13 +205,13 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
                     doCmd args, _inp, ctx, _cb
         async.series tasks, cb
 
-    # Callback value if $val
+    # Return literal value (number or string) if $val
     else if cmd_token.val?
         console.log('VAL: ' + _inspect cmd_args) if DEBUG
         parseArgs inp, [cmd_token.val], (err, parsed) ->
             cb null, parsed[0]
 
-    # Callback value if $var
+    # Return variable value if $var
     else if cmd_token.var?
         console.log('VAR: ' + _inspect cmd_args) if DEBUG
         $key = cmd_token.var
@@ -196,7 +219,7 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
             val = inp
         else
             key = $key.slice(1)
-            val = ctx.env[key]
+            val = ctx.get 'vars', key
         cb null, val
 
     # Just execute if single piped
@@ -216,7 +239,9 @@ doCmd = (_args, inp, ctx, cb) ->
         console.log '###################\n'
     args = _.clone _args
     cmd = args.shift()
-    if fn = ctx.lookup cmd
+    if fn = builtins[cmd]
+        fn(inp, args, ctx, cb)
+    else if fn = ctx.get 'fns', cmd
         fn(inp, args, ctx, cb)
     else
         cb "No command #{ cmd }. "
@@ -247,6 +272,8 @@ mapInto = (l, f, d, cb) ->
 # Take an object and an expression and follow the expression
 # tree down to the desired result
 descendObj = (_obj, _expr, ctx, final_cb) ->
+
+    # This is me hoping Node has really good GC
     obj = _.clone _obj
     expr = _.clone _expr
 
@@ -345,9 +372,8 @@ at = (inp, expr, ctx, cb) ->
     descendObj inp, expr, ctx, cb
 
 module.exports =
+    Pipeline: Pipeline
     Context: Context
-    createContext: createContext
-    execPipelines: execPipelines
     parsePipelines: parsePipelines
     runPipeline: runPipeline
     doCmd: doCmd

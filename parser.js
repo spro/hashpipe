@@ -144,7 +144,7 @@ module.exports = (function() {
         peg$c102 = /^[^;]/,
         peg$c103 = { type: "class", value: "[^;]", description: "[^;]" },
         peg$c104 = function(alias, rest) { return [{cmd: ['alias', alias, rest.join('').trim()]}]; },
-        peg$c105 = function(set, pipeline) { return [{cmd: ['let', set, {sub: [pipeline]}]}]; },
+        peg$c105 = function(set, pipeline) { return [{cmd: ['set', set, {sub: [pipeline]}]}]; },
 
         peg$currPos          = 0,
         peg$reportedPos      = 0,

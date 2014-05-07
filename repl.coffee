@@ -1,5 +1,5 @@
 readline = require 'readline'
-pipeline = require './pipeline'
+{Pipeline} = require './pipeline'
 builtins = require './builtins'
 ansi = require('ansi')(process.stdout)
 {stringify} = require './helpers'
@@ -7,13 +7,14 @@ fs = require 'fs'
 
 # Import default modules
 
-ctx = pipeline.createContext()
+pipe = new Pipeline()
     .use(require('./modules/mongo').connect())
     .use(require('./modules/redis').connect())
     .use('http')
     .use('html')
     .use('files')
     .use('keywords')
+repl_ctx = pipe.subScope()
 
 last_out = null
 
@@ -29,7 +30,7 @@ writeError = (err) ->
 
 executeScript = (script, cb) ->
     try
-        pipeline.execPipelines script, last_out, ctx, (err, data) ->
+        pipe.exec script, last_out, repl_ctx, (err, data) ->
             last_out = data
             # TODO: Some more advanced output handling,
             # trim long lists with some ellipses
@@ -50,11 +51,11 @@ if process.argv.length > 2
     setTimeout ->
         executeScript script, ->
             process.exit()
-    , 1500
+    , 50
 
 else
     # Set up readline prompt
-    fn_names = (n for n, f of ctx.fns).concat (n for n, f of builtins)
+    fn_names = (n for n, f of pipe.fns).concat (n for n, f of builtins)
     fnCompleter = (line) ->
         to_complete = line.split(' ').slice(-1)[0]
         completions = fn_names.filter ((c) -> c.indexOf(to_complete) == 0)
