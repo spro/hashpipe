@@ -56,9 +56,12 @@ execPipelines = (cmd, inp, ctx, cb) ->
         ctx = createContext()
     try
         pipelines = parsePipelines(cmd)
+    catch e
+        cb "Error parsing pipeline: " + e
+    try
         runPipelines pipelines, inp, ctx, cb
     catch e
-        cb "Error executing pipeline: " + e
+        cb "Error running pipeline: " + e
 
 # Parse a command pipeline into a series of tokens
 # that can be passed to `runPipeline`
