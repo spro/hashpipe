@@ -256,8 +256,8 @@ builtins.bin = (inp, args, ctx, cb) ->
     
     for i in [0..count-1]
         bins.push
-            start: i * interval
-            end: ( i + 1 ) * interval
+            start: i * interval + min
+            end: ( i + 1 ) * interval + min
             count: 0
             items: []
 
