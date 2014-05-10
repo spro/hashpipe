@@ -73,6 +73,9 @@ class Pipeline extends Scope
             inp = null
         try
             pipelines = parsePipelines(script)
+        catch e
+            cb "Error parsing pipeline: " + e
+        try
             runPipelines pipelines, inp, ctx, cb
         catch e
             cb "Error executing pipeline: " + e

@@ -256,8 +256,8 @@ builtins.bin = (inp, args, ctx, cb) ->
     
     for i in [0..count-1]
         bins.push
-            start: i * interval
-            end: ( i + 1 ) * interval
+            start: i * interval + min
+            end: ( i + 1 ) * interval + min
             count: 0
             items: []
 
@@ -268,8 +268,14 @@ builtins.bin = (inp, args, ctx, cb) ->
 
     cb null, bins
 
+builtins.slice = (inp, args, ctx, cb) ->
+    a = args[0] || 0
+    b = args[1] || inp.length
+    cb null, inp.slice(a, b)
+
 builtins.now = (inp, args, ctx, cb) -> cb null, new Date
 builtins.timestamp = (inp, args, ctx, cb) -> cb null, new Date().getTime()
+builtins['oid-timestamp'] = (inp, args, ctx, cb) -> cb null, (parseInt(inp.toString().substring(0, 8), 16) * 1000)
 
 randomString = (len=5) ->
     s = ''
