@@ -290,7 +290,7 @@ builtins.alias = (inp, args, ctx, cb) ->
     script = args[1]
     if !script
         # Showing an alias
-        cb null, ctx.aliases[alias]
+        cb null, ctx.get 'aliases', alias
     else
         # Setting an alias
         ctx.alias alias, script
