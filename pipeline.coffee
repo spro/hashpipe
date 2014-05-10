@@ -19,21 +19,28 @@ class Scope
     constructor: (init={}) ->
         _.extend @, init
 
+    # Set a value on the current scope
     set: (t, k, v) ->
         if DEBUG
             console.log "[Scope set] Setting #{ t } #{ k } to #{ v }"
         @[t] = {} if !@[t]?
         @[t][k] = v
 
+    # Get a value from the current scope, falling back to parent scope
     get: (t, k) ->
         if DEBUG
             console.log "[Scope get] Getting #{ t } #{ k }"
         @[t]?[k] || @parent?.get t, k
 
+    # Set an alias on the highest ranking scope
     alias: (a, s) ->
-        @set 'fns', a, through s
-        @set 'aliases', a, s
+        if @parent?
+            @parent.alias a, s
+        else
+            @set 'fns', a, through s
+            @set 'aliases', a, s
 
+    # Create a new child scope for this scope
     subScope: (init={})->
         init.parent = @
         return new Scope init
