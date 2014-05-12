@@ -132,7 +132,6 @@ builtins.sleep = (inp, args, ctx, cb) ->
 
 builtins.set = (inp, args, ctx, cb) ->
     data = args[1] || inp
-    console.log 'une set?'
     ctx.set 'vars', args[0], data
     cb null, data
 
@@ -253,7 +252,7 @@ builtins.bin = (inp, args, ctx, cb) ->
             max = k + 0.000000001
 
     interval = ( max - min ) / count
-    
+
     for i in [0..count-1]
         bins.push
             start: i * interval + min
