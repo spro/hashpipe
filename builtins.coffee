@@ -141,6 +141,14 @@ builtins.inc = (inp, args, ctx, cb) ->
     ctx[inc_key] = 0 if !ctx[inc_key]?
     cb null, ++ctx[inc_key]
 
+# `push` adds input to the end of the specified array
+builtins.push = (inp, args, ctx, cb) ->
+    data = args[1] || inp
+    l = ctx.get('vars', args[0]) || []
+    l.push data
+    ctx.set('vars', args[0], l)
+    cb null, l
+
 # `ginc` gets or increments a number given a key and object key
 builtins.ginc = (inp, args, ctx, cb) ->
     inc_key = args[0]
@@ -266,6 +274,15 @@ builtins.bin = (inp, args, ctx, cb) ->
         bins[bi].count += 1
 
     cb null, bins
+
+builtins.chunks = (inp, args, ctx, cb) ->
+    n = args[0] || 10
+    cs = ([] for i in [0..n-1])
+    for i in [0..inp.length-1]
+        ci = Math.floor(i / n)
+        cs[ci].push inp[i]
+
+    cb null, cs
 
 builtins.slice = (inp, args, ctx, cb) ->
     a = args[0] || 0
