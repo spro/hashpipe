@@ -11,59 +11,34 @@ parseResponseData = (data) ->
                 data = data.toString()
     return data
 
+httpMethod = (method) ->
+    (inp, args, ctx, cb) ->
+        request_options =
+            url: args[0]
+            method: method
+            json: !inp? || (typeof inp == 'object')
+            body: inp
+            headers:
+                'user-agent': 'Qnectar Pipeline HTTP Module'
+        req = request request_options, (err, res, data) ->
+            cb null, parseResponseData data
+        # The multipart way
+        # req_data = req.form()
+        # req_data.append k, v for k, v of inp
+        if auth = args[1]
+            req.auth auth.username, auth.password
+
 # get "url" -> {data} / "html"
-exports.get = (inp, args, ctx, cb) ->
-    request_options =
-        url: args[0]
-        json: true
-        headers:
-            'user-agent': 'Qnectar Pipeline HTTP Module'
-    request.get request_options, (err, res, data) ->
-        cb null, parseResponseData data
+exports.get = httpMethod 'GET'
 
 # {data} -> post "url" -> {data} / "html"
-exports.post = (inp, args, ctx, cb) ->
-    request_options =
-        url: args[0]
-        method: 'POST'
-        json: (typeof inp == 'object')
-        body: inp
-        headers:
-            'user-agent': 'Qnectar Pipeline HTTP Module'
-    req = request request_options, (err, res, data) ->
-        cb null, parseResponseData data
-    # The multipart way
-    # req_data = req.form()
-    # req_data.append k, v for k, v of inp
-    if auth = args[1]
-        req.auth auth.username, auth.password
+exports.post = httpMethod 'POST'
 
 # {data} -> post "url" -> {data} / "html"
-exports.put = (inp, args, ctx, cb) ->
-    request_options =
-        url: args[0]
-        method: 'PUT'
-        json: true
-        body: inp
-        headers:
-            'user-agent': 'Qnectar Pipeline HTTP Module'
-    req = request request_options, (err, res, data) ->
-        cb null, parseResponseData data
-    # The multipart way
-    # req_data = req.form()
-    # req_data.append k, v for k, v of inp
-    if auth = args[1]
-        req.auth auth.username, auth.password
+exports.put = httpMethod 'PUT'
 
 # delete "url" -> ok
-exports.delete = (inp, args, ctx, cb) ->
-    request_options =
-        url: args[0]
-        method: 'DELETE'
-        headers:
-            'user-agent': 'Qnectar Pipeline HTTP Module'
-    request request_options, (err, res, data) ->
-        cb null, data
-
+exports.delete = httpMethod 'DELETE'
 
 exports.tostring = (inp, args, ctx, cb) -> cb null, inp.toString()
+
