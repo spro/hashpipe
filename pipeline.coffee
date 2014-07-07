@@ -18,6 +18,7 @@ class Scope
 
     constructor: (init={}) ->
         _.extend @, init
+        return @
 
     # Set a value on the current scope
     set: (t, k, v) ->
@@ -41,9 +42,15 @@ class Scope
             @set 'aliases', a, s
 
     # Create a new child scope for this scope
-    subScope: (init={})->
+    subScope: (init={}) ->
         init.parent = @
         return new Scope init
+
+    topScope: ->
+        if @parent?
+            @parent.topScope()
+        else
+            @
 
 class Context extends Scope
 
