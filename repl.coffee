@@ -18,7 +18,7 @@ PipelineREPL = (@pipeline) ->
 
     # Add command line arguments as variables
     base_env = _.omit(argv, '_')
-    _.forEach base_env, (v, k) ->
+    _.forEach base_env, (v, k) =>
         @context.set('vars', k, v)
 
     # Keep track of last response
