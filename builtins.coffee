@@ -304,7 +304,7 @@ builtins.randstr = (inp, args, ctx, cb) -> cb null, randomString args[0]
 
 builtins.use = (inp, args, ctx, cb) ->
     for arg in args
-        ctx.use arg
+        ctx.topScope().use arg
     cb null, 'Using: ' + args.join(', ')
 
 builtins.alias = (inp, args, ctx, cb) ->
