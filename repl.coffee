@@ -2,7 +2,7 @@ readline = require 'readline'
 {Pipeline} = require './pipeline'
 builtins = require './builtins'
 ansi = require('ansi')(process.stdout)
-{stringify} = require './helpers'
+{prettyPrint} = require './helpers'
 fs = require 'fs'
 _ = require 'underscore'
 argv = require('minimist')(process.argv)
@@ -35,9 +35,7 @@ defaultPipeline = ->
         .use('keywords')
 
 PipelineREPL::writeSuccess = (data) ->
-    ansi.fg['green']()
-    console.log stringify data
-    ansi.reset()
+    console.log prettyPrint data
 
 PipelineREPL::writeError = (err) ->
     ansi.fg['red']()
