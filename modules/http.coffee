@@ -17,7 +17,7 @@ httpMethod = (method) ->
             url: args[0]
             method: method
             json: !inp? || (typeof inp == 'object')
-            body: inp
+            body: inp if method != 'GET'
             headers:
                 'user-agent': 'Qnectar Pipeline HTTP Module'
         req = request request_options, (err, res, data) ->
