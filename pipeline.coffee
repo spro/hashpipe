@@ -26,6 +26,7 @@ class Scope
             console.log "[Scope set] Setting #{ t } #{ k } to #{ v }"
         @[t] = {} if !@[t]?
         @[t][k] = v
+        return @
 
     # Get a value from the current scope, falling back to parent scope
     get: (t, k) ->
