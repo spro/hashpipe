@@ -120,7 +120,7 @@ runPipelines = (pipelines, inp, ctx, cb) ->
         _runPipeline = (_pipeline, _cb) ->
             runPipeline _pipeline, inp, ctx, _cb
         async.mapSeries pipelines, _runPipeline, (err, results) ->
-            cb null, results.slice(-1)[0]
+            cb err, results.slice(-1)[0]
     else runPipeline pipelines[0], inp, ctx, cb
 
 runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
@@ -193,7 +193,10 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
         cb = (err, ret) ->
             if DEBUG
                 console.log ' ===> ' + _inspect ret
-            applyAt ret, final_cb
+            if err
+                final_cb err
+            else
+                applyAt ret, final_cb
 
     # Create a callback to continue the pipeline otherwise
     else cb = (err, ret) ->
