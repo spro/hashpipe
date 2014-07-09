@@ -299,6 +299,12 @@ randomString = (len=5) ->
         s += Math.random().toString(36).slice(2, len-s.length+2)
     return s
 builtins.randstr = (inp, args, ctx, cb) -> cb null, randomString args[0]
+builtins.randomChoice = (inp, args, ctx, cb) ->
+    cb null, _.sample(inp, 1)[0]
+builtins.randomSample = (inp, args, ctx, cb) ->
+    cb null, _.sample inp, args[0] || inp.length/2
+builtins.shuffle = (inp, args, ctx, cb) ->
+    cb null, _.shuffle inp
 
 # Including modules
 
