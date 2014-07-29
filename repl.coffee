@@ -81,6 +81,7 @@ PipelineREPL::startReadline = ->
         output: process.stdout
         completer: fnCompleter
     rlv = readline_vim(rl)
+    @rl = rl
 
     # Overload readline's addHistory to save to our history file
     rl_addHistory = rl._addHistory
@@ -94,7 +95,7 @@ PipelineREPL::startReadline = ->
     loadHistory (err, saved_history) ->
         rl.history.push.apply(rl.history, saved_history)
 
-    rl.setPrompt 'Q > '
+    @setPromptColor 36
     rl.prompt()
 
     # Interpret input as scripts and run
@@ -103,6 +104,15 @@ PipelineREPL::startReadline = ->
         script = 'id' if !script.length
         repl.executeScript script, ->
             rl.prompt()
+
+# Prompt helpers
+
+prompt_text = "Q > "
+prompt_length = prompt_text.length
+PipelineREPL::setPromptColor = (color=0) ->
+    prefix = '\x1b[' + color + 'm'
+    suffix = '\x1b[0m'
+    @rl.setPrompt prefix + prompt_text + suffix, prompt_length
 
 # History helpers
 
