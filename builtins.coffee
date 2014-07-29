@@ -66,11 +66,25 @@ builtins.num = (inp, args, ctx, cb) -> cb null, num inp
 # val -> bool -> val?
 builtins.bool = (inp, args, ctx, cb) -> cb null, bool inp
 
+# `if [test] [value]`
+# Returns the value if the test is true, otherwise nothing
+# Not actually very useful
 builtins.if = (inp, args, ctx, cb) ->
     if args[0]
         cb null, args[1]
     else
         cb()
+
+# `case [key] {cases}`
+# Use key as a conditional or case; looks in a cases dictionary to decide what
+# to return. Ideally there's something more syntactic and less forcedly
+# functional to fill this case. A big problem in this case is you can't use it
+# to branch because it can only return computed values. Then again it would be
+# almost impossible to write a good multi-case script in one line.
+builtins.case = (inp, args, ctx, cb) ->
+    _case = args[0]
+    cases = args[1]
+    cb null, cases[_case]
 
 # Building objects and arrays
 
@@ -113,10 +127,19 @@ builtins.values = (inp, args, ctx, cb) ->
 builtins.pairs = builtins.items = (inp, args, ctx, cb) ->
     cb null, _.pairs inp
 
+# String operations
+
+builtins.upper = (inp, args, ctx, cb) -> cb null, inp.toUpperCase()
+builtins.lower = (inp, args, ctx, cb) -> cb null, inp.toLowerCase()
+
 # List operations
 
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
-builtins.reverse = (inp, args, ctx, cb) -> cb null, inp.reverse()
+builtins.reverse = (inp, args, ctx, cb) ->
+    if typeof inp == 'string'
+        cb null, inp.split('').reverse().join('')
+    else
+        cb null, inp.reverse()
 builtins.head = (inp, args, ctx, cb) -> cb null, inp[..(args[0]||50)-1]
 builtins.tail = (inp, args, ctx, cb) ->
     count = args[0]
@@ -196,6 +219,7 @@ builtins.filter = (inp, args, ctx, cb) ->
             filtered_inp.push(i) if i
     cb null, filtered_inp
 
+# Pass through without altering input (isn't this id?)
 builtins.tee = (inp, args, ctx, cb) ->
     cb null, inp
 
@@ -298,12 +322,15 @@ builtins.now = (inp, args, ctx, cb) -> cb null, new Date
 builtins.timestamp = (inp, args, ctx, cb) -> cb null, new Date().getTime()
 builtins['oid-timestamp'] = (inp, args, ctx, cb) -> cb null, (parseInt(inp.toString().substring(0, 8), 16) * 1000)
 
-randomString = (len=5) ->
+randstr = (len=5) ->
     s = ''
     while s.length < len
         s += Math.random().toString(36).slice(2, len-s.length+2)
     return s
-builtins.randstr = (inp, args, ctx, cb) -> cb null, randomString args[0]
+randint = (max=100) ->
+    return Math.floor(Math.random() * max)
+builtins.randstr = (inp, args, ctx, cb) -> cb null, randstr args[0]
+builtins.randint = (inp, args, ctx, cb) -> cb null, randint args[0]
 builtins.randomChoice = (inp, args, ctx, cb) ->
     cb null, _.sample(inp, 1)[0]
 builtins.randomSample = (inp, args, ctx, cb) ->
