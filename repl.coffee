@@ -111,6 +111,7 @@ saveHistory = (line) ->
 
 loadHistory = (cb) ->
     fs.readFile history_path, (err, history_data) ->
+        cb null, [] if !history_data
         history_lines = history_data.toString().trim().split('\n')
         history_lines.reverse()
         cb null, history_lines
