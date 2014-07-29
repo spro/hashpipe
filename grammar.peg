@@ -84,12 +84,12 @@ dquoted_literal = dquote_ ls:("\\n" { return '\n'; } / escd_char / [^"] )* _dquo
 quoted_literal = squoted_literal / dquoted_literal
 valid_key = letter_word/quoted_literal
 quoted_phrase = quoted_literal / quoted_cmd
-cmd_phrase = quoted_phrase / cmd_word / obj_phrase/sub_cmd 
+cmd_phrase = quoted_phrase / cmd_word / sub_cmd / sub_obj
 
-cmd = head:cmd_phrase
+cmd = obj_cmd /
+      head:cmd_phrase
       tail:(space c:cmd_phrase { return c; })*
       { return [head].concat(tail); }
-      / obj_cmd
 
 cmd_at = 
     cmd:cmd
@@ -118,17 +118,17 @@ spiped_cmd =
     spipe cmd_at:cmd_at
     { cmd_at.type = 'spipe'; return cmd_at; }
 
-cmd_section = at at_expression / start_cmd / ppiped_cmd / spiped_cmd / piped_cmd 
+cmd_section = start_cmd / ppiped_cmd / spiped_cmd / piped_cmd 
 
 sub_cmd =
     "$(" pipelines:pipelines ")"
     { return {sub:pipelines}; }
-obj_phrase = obj_cmd:obj_cmd { return {sub: [[{cmd:obj_cmd}]]}; }
+sub_obj = obj_cmd:obj_cmd { return {sub: [[{cmd:obj_cmd}]]}; }
 
 pipeline =
     aliasing / setting /
     space
-    head:(at atexp:at_expression { return {at: atexp}; })?
+    head:cmd_section
     tail:cmd_section*
     space
     { if (head) return [head].concat(tail); else return tail; }
