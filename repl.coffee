@@ -107,7 +107,7 @@ PipelineREPL::startReadline = ->
 
 # Prompt helpers
 
-prompt_text = "Q > "
+prompt_text = "# "
 prompt_length = prompt_text.length
 PipelineREPL::setPromptColor = (color=0) ->
     prefix = '\x1b[' + color + 'm'
