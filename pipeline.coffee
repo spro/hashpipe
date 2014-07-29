@@ -32,7 +32,9 @@ class Scope
     get: (t, k) ->
         if DEBUG
             console.log "[Scope get] Getting #{ t } #{ k }"
-        @[t]?[k] || @parent?.get t, k
+        got = @[t]?[k] if k?
+        got = @[t] if !k?
+        got || @parent?.get t, k
 
     # Set an alias on the highest ranking scope
     alias: (a, s) ->
