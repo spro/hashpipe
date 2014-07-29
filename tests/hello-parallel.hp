@@ -1,0 +1,5 @@
+alias hello-delayed = sleep 1000 | echo Hello from numero $! at $( now );
+log Starting at $( now );
+
+range 0 10 || hello-delayed
+
