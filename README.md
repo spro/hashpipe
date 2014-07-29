@@ -1,16 +1,12 @@
-# pipeline
+# hashpipe
 
-Pipeline is a DSL (and REPL) for traversing and manipulating JSON objects in a Unixy manner.
-
-In action:
-
-![](/docs/preview.png)
+hashpipe is a DSL (and REPL) for traversing and manipulating JSON objects in a Unixy manner.
 
 ---
 
 ## Syntax
 
-The pipeline syntax is based off that of bash, but specialized for manipulating and traversing JSON objects. The most similar aspect is the piping of subsequent commands. The most notable difference is the addition of the `@`-expression, which accesses object attributes (and more).
+The hashpipe syntax is based off that of bash, but specialized for manipulating and traversing JSON objects. The most similar aspect is the piping of subsequent commands. The most notable difference is the addition of the `@`-expression, used for object traversal.
 
 ## `@`-expressions
 
@@ -23,7 +19,7 @@ The simplest use case for `@` is accessing the attributes of an object, or items
 Let's say we have a command `dog_people` that outputs a list of two people and their dogs, as seen above. To access the second item of that list, we would use the numeric index 1:
 
 ```
-> dog_people @ 1
+# dog_people @ 1
 ```
 
 ... which leaves us with Fred, all alone with no dogs.
@@ -35,7 +31,7 @@ Let's say we have a command `dog_people` that outputs a list of two people and t
 We can chain attributes with `.` to descend further into the object:
 
 ```
-> dog_people @ 1.name
+# dog_people @ 1.name
 ```
 
 Leaving us with just `"fred"`.
@@ -43,7 +39,7 @@ Leaving us with just `"fred"`.
 This of course can be extended as far into the object as necessary, e.g. to get the age of Woofer:
 
 ```
-> dog_people @ 0.dogs.1.age
+# dog_people @ 0.dogs.1.age
 ```
 
 ### Mapping with `:`
@@ -51,7 +47,7 @@ This of course can be extended as far into the object as necessary, e.g. to get 
 To access one key of an array of objects, we can use the `:` or *map* operator. The map operator applies an accessor to each item of an array.
 
 ```
-> dog_people @ :dog
+# dog_people @ :dog
 ```
 
 ```js
@@ -69,22 +65,24 @@ To access one key of an array of objects, we can use the `:` or *map* operator. 
 Echo:
 
 ```
-> echo hello
+# echo hello
 "hello"
 ```
 
 Identity:
 
 ```
-> echo who am i? | id
+# echo "who am i?"
+"who am i?"
+# echo "who am i?" | id
 "who am i?"
 ```
 
 Arithmetic:
 
 ```
-> + 4 20
-24
-> * 6 7 10
+# + 1 2
+3
+# * 6 7 10
 420
 ```
