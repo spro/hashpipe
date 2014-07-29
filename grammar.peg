@@ -57,9 +57,12 @@ at_expression =
 pipe = space "|" space
 ppipe = space "||" space
 spipe = space "|=" space
-quote = space ["'] space
-quote_ = space ["']
-_quote = ["'] space
+squote = space ['] space
+dquote = space ["] space
+squote_ = space [']
+_squote = ['] space
+dquote_ = space ["]
+_dquote = ["] space
 
 number = s:"-"? ds:[0-9]+ { n = Number(ds.join('')); if (s) n = n*-1; return n; }
 ok_char = letter / [=:/.,#%!?'+*%^&{}\[\]]
@@ -72,8 +75,13 @@ var_word = "$" w:letter_word { return '$' + w; }
     / "$!"
 cmd_char = escd_char / ok_char / var_word
 cmd_word = cs:cmd_char+ { return cs.join('').trim(); }
-quoted_cmd = quote cmd:cmd quote { return {quoted: cmd}; }
-quoted_literal = quote_ ls:("\\n" { return '\n'; } / escd_char / [^"] )* _quote { return {quoted: [ls.join('')] }; }
+squoted_cmd = squote cmd:cmd squote { return {quoted: cmd}; }
+dquoted_cmd = dquote cmd:cmd dquote { return {quoted: cmd}; }
+quoted_cmd = squoted_cmd / dquoted_cmd
+squoted_literal = squote_ ls:("\\n" { return '\n'; } / escd_char / [^'] )* _squote { return {quoted: [ls.join('')] }; }
+dquoted_literal = dquote_ ls:("\\n" { return '\n'; } / escd_char / [^"] )* _dquote { return {quoted: [ls.join('')] }; }
+quoted_literal = squoted_literal / dquoted_literal
+valid_key = letter_word/quoted_literal
 quoted_phrase = quoted_literal / quoted_cmd
 cmd_phrase = quoted_phrase / cmd_word / sub_cmd 
 
