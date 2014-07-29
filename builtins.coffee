@@ -51,7 +51,8 @@ builtins.val = (inp, args, ctx, cb) -> cb null, args[0]
 
 # `echo` returns its arguments joined as a string
 # echo val -> "val"
-builtins.echo = (inp, args, ctx, cb) -> cb null, args.join(' ')
+builtins.echo = (inp, args, ctx, cb) ->
+    cb null, args.join(' ')
 
 # `key` is `echo` without spaces, useful for building keys
 # key "a" ":b:" "c" -> "a:b:c"
@@ -107,6 +108,10 @@ builtins.keys = (inp, args, ctx, cb) ->
 # {obj} -> values -> [values]
 builtins.values = (inp, args, ctx, cb) ->
     cb null, _.values inp
+
+# {obj} -> items -> [[key, value]]
+builtins.pairs = builtins.items = (inp, args, ctx, cb) ->
+    cb null, _.pairs inp
 
 # List operations
 
@@ -327,3 +332,14 @@ builtins.alias = (inp, args, ctx, cb) ->
             alias: alias
             script: script
 
+builtins.aliases = (inp, args, ctx, cb) ->
+    if !inp
+        # Showing aliases
+        cb null, ctx.get 'aliases'
+    else
+        # Setting aliases
+        for alias, script of inp
+            ctx.alias alias, script
+        cb null,
+            success: true
+            aliases: inp
