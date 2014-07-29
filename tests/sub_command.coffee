@@ -29,6 +29,7 @@ pipe = new Pipeline()
 test_ctx = pipe.subScope
     vars:
         hi: 'hello'
+        world: 'earth'
         cheese: 'fromage'
         george:
             name: 'Gregory'
@@ -72,13 +73,13 @@ tests.sub_val =
 
 # Test using a sub-pipe as an object key
 tests.sub_key =
-    cmd: """ echo Howdy, Earth! @ {$( slugify ): .} """
+    cmd: """ echo "Howdy, Earth!" @ {$( slugify ): .} """
     expected:
         'howdy-earth': 'Howdy, Earth!'
 
 # Test using a sub-pipe as both a key and a value
 tests.sub_key_val =
-    cmd: """ echo Howdy, Earth! @ {$(echo phrase): {$( slugify ): .}} """
+    cmd: """ echo "Howdy, Earth!" @ {$(echo phrase): {$( slugify ): .}} """
     expected:
         phrase:
             'howdy-earth': 'Howdy, Earth!'
@@ -93,6 +94,11 @@ tests.sub_var =
     cmd: """ echo $hi """
     expected: 'hello'
 
+# Test varable substitution
+tests.multi_sub_var =
+    cmd: """ echo "$hi $world" """
+    expected: 'hello earth'
+
 # Test character escapes alongside variables
 tests.escd_quoted =
     cmd: """ echo "\\)=$cheese" """
@@ -100,13 +106,18 @@ tests.escd_quoted =
 
 # Test variables
 tests.vars =
-    cmd: """ frank = 5 ; echo $frank """
+    cmd: """ $frank = 5 ; echo $frank """
     expected: '5'
 
 # Test object variables, variable @-expressions, `;` separated results
 tests.obj_vars =
-    cmd: """ fred = obj name fred ; echo $( $fred @ name ) """
-    expected: 'fred'
+    cmd: """ $fred = {name: "Fred"} ; echo $( $fred @ name ) """
+    expected: 'Fred'
+
+# Test using objects within expressions
+tests.list_objs =
+    cmd: """ list {name: "Fred"} {name: "Sam"} @ 1.name """
+    expected: 'Sam'
 
 # Setting and using aliases
 tests.set_alias =
