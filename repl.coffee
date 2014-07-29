@@ -4,8 +4,15 @@ builtins = require './builtins'
 ansi = require('ansi')(process.stdout)
 {prettyPrint} = require './helpers'
 fs = require 'fs'
+path = require 'path'
 _ = require 'underscore'
 argv = require('minimist')(process.argv)
+util = require 'util'
+
+# Helper functions
+
+getHomeDir = ->
+    return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE
 
 # Import default modules
 
@@ -72,14 +79,43 @@ PipelineREPL::startReadline = ->
         input: process.stdin
         output: process.stdout
         completer: fnCompleter
+
+    # Overload readline's addHistory to save to our history file
+    rl_addHistory = rl._addHistory
+    rl._addHistory = ->
+        last = rl.history[0]
+        line = rl_addHistory.call(rl)
+        saveHistory(line) if last != line
+        return line
+
+    # Bootstrap history from file
+    loadHistory (err, saved_history) ->
+        rl.history.push.apply(rl.history, saved_history)
+
     rl.setPrompt 'Q > '
     rl.prompt()
 
+    # Interpret input as scripts and run
     rl.on 'line', (script) ->
         script = script.trim()
         script = 'id' if !script.length
         repl.executeScript script, ->
             rl.prompt()
+
+# History helpers
+
+history_path = path.resolve getHomeDir(), '.pipeline_history'
+
+saveHistory = (line) ->
+    fs.appendFile history_path, line + '\n'
+
+loadHistory = (cb) ->
+    fs.readFile history_path, (err, history_data) ->
+        history_lines = history_data.toString().trim().split('\n')
+        history_lines.reverse()
+        cb null, history_lines
+
+# Going
 
 if require.main != module
     # Module mode
