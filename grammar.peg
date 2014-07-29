@@ -13,9 +13,9 @@ open_bracket = space "[" space
 close_bracket = space "]" space
 at = space "@" space
 
-word = ls:letter+ { return ls.join(''); }
+at_word = ls:letter+ { return ls.join(''); }
 
-array = open_bracket
+at_array = open_bracket
     values:(
         head:at_expression
         tail:(comma t:at_expression { return t; })*
@@ -24,16 +24,16 @@ array = open_bracket
     close_bracket { return values; }
 
 okv =
-    k:word col v:at_expression { return {key: k, val: v}; }
+    k:at_word col v:at_expression { return {key: k, val: v}; }
     / k:sub_cmd col v:at_expression { return {key: [k], val: v}; }
-    / k:word { return {key: k, val: [{get: k}]}; }
+    / k:at_word { return {key: k, val: [{get: k}]}; }
 
-obj = "{" space ss:(okv comma?)+ space "}" {
+at_obj = "{" space ss:(okv comma?)+ space "}" {
     ss = ss.map(function(sp) { return sp[0]; });
     return {obj: ss};
 }
 
-section = obj / array / word
+section = at_obj / at_array / at_word
 
 do_sub = (s:dot t:sub_cmd { return t; })
 do_sub_ = (s:dot? t:sub_cmd { return t; })
@@ -57,12 +57,16 @@ at_expression =
 pipe = space "|" space
 ppipe = space "||" space
 spipe = space "|=" space
-quote = space ["'] space
-quote_ = space ["']
-_quote = ["'] space
+squote = space ['] space
+dquote = space ["] space
+squote_ = space [']
+_squote = ['] space
+dquote_ = space ["]
+_dquote = ["] space
 
 number = s:"-"? ds:[0-9]+ { n = Number(ds.join('')); if (s) n = n*-1; return n; }
-ok_char = letter / [=:/.,#%!?'+*%^&{}\[\]]
+bool = "true" / "false"
+ok_char = letter / [=:/.#%!?+*%^&\[\]]
 escd_at = (l1:letter "@" l2:letter { return l1+'@'+l2; } / "\\@" { return "@"; })
 escd_paren = "\\(" { return "("; } / "\\)" { return ")"; }
 escd_dolla = "\\$"
@@ -72,14 +76,20 @@ var_word = "$" w:letter_word { return '$' + w; }
     / "$!"
 cmd_char = escd_char / ok_char / var_word
 cmd_word = cs:cmd_char+ { return cs.join('').trim(); }
-quoted_cmd = quote cmd:cmd quote { return {quoted: cmd}; }
-quoted_literal = quote_ ls:("\\n" { return '\n'; } / escd_char / [^"] )* _quote { return {quoted: [ls.join('')] }; }
+squoted_cmd = squote cmd:cmd squote { return {quoted: cmd}; }
+dquoted_cmd = dquote cmd:cmd dquote { return {quoted: cmd}; }
+quoted_cmd = squoted_cmd / dquoted_cmd
+squoted_literal = squote_ ls:("\\n" { return '\n'; } / escd_char / [^'] )* _squote { return {quoted: [ls.join('')] }; }
+dquoted_literal = dquote_ ls:("\\n" { return '\n'; } / escd_char / [^"] )* _dquote { return {quoted: [ls.join('')] }; }
+quoted_literal = squoted_literal / dquoted_literal
+valid_key = letter_word/quoted_literal
 quoted_phrase = quoted_literal / quoted_cmd
-cmd_phrase = quoted_phrase / cmd_word / sub_cmd 
+cmd_phrase = quoted_phrase / cmd_word / obj_phrase/sub_cmd 
 
 cmd = head:cmd_phrase
       tail:(space c:cmd_phrase { return c; })*
       { return [head].concat(tail); }
+      / obj_cmd
 
 cmd_at = 
     cmd:cmd
@@ -111,12 +121,9 @@ spiped_cmd =
 cmd_section = at at_expression / start_cmd / ppiped_cmd / spiped_cmd / piped_cmd 
 
 sub_cmd =
-    "$("
-    pipelines:pipelines
-    ")"
-    {
-        return {sub:pipelines};
-    }
+    "$(" pipelines:pipelines ")"
+    { return {sub:pipelines}; }
+obj_phrase = obj_cmd:obj_cmd { return {sub: [[{cmd:obj_cmd}]]}; }
 
 pipeline =
     aliasing / setting /
@@ -132,13 +139,28 @@ pipelines =
     tail:(semi pipeline:pipeline { return pipeline; })*
     { return [head].concat(tail); }
 
-setup = var_word:letter_word space "=" space { return var_word; }
-
 aliasing =
     space "alias" space alias:letter_word space "=" space rest:[^;]+
     { return [{cmd: ['alias', alias, rest.join('').trim()]}]; }
 
+setup = var_word:var_word space "=" space { return var_word; }
+
 setting =
     space set:setup pipeline:pipeline
-    { return [{cmd: ['set', set, {sub: [pipeline]}]}]; }
+    { return [{cmd: ['set', set.slice(1), {sub: [pipeline]}]}]; }
+
+kv =
+    k:valid_key col v:start_cmd { return {key: k, val: v}; }
+
+obj_cmd = "{" space head:kv tail:(comma kv)* space "}"
+    {
+        var kvs = [head].concat(tail.map(function(sp) { return sp[1]; }));
+        var obj_cmd = ['obj'];
+        for (var i in kvs) {
+            var kv = kvs[i];
+            obj_cmd.push(kv.key);
+            obj_cmd.push({sub:[[kv.val]]});
+        }
+        return obj_cmd;
+    }
 

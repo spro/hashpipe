@@ -32,7 +32,9 @@ class Scope
     get: (t, k) ->
         if DEBUG
             console.log "[Scope get] Getting #{ t } #{ k }"
-        @[t]?[k] || @parent?.get t, k
+        got = @[t]?[k] if k?
+        got = @[t] if !k?
+        got || @parent?.get t, k
 
     # Set an alias on the highest ranking scope
     alias: (a, s) ->
@@ -167,10 +169,11 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
                 else if $key = arg.match /\\\$[a-zA-Z0-9_-]*$/
                     arg = $key[0].slice(1)
                 # Within string replacement
-                else if $key = arg.match /\$[a-zA-Z0-9_-]+/
-                    $key = $key[0]
-                    key = $key.slice(1)
-                    arg = arg.replace $key, ctx.get 'vars', key
+                else
+                    while $key = arg.match /\$[a-zA-Z0-9_-]+/
+                        $key = $key[0]
+                        key = $key.slice(1)
+                        arg = arg.replace $key, ctx.get 'vars', key
             _cb null, arg
 
         async.map args, replaceArg, (err, new_args) ->
