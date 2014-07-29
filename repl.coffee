@@ -1,4 +1,5 @@
 readline = require 'readline'
+readline_vim = require 'readline-vim'
 {Pipeline} = require './pipeline'
 builtins = require './builtins'
 ansi = require('ansi')(process.stdout)
@@ -79,6 +80,7 @@ PipelineREPL::startReadline = ->
         input: process.stdin
         output: process.stdout
         completer: fnCompleter
+    rlv = readline_vim(rl)
 
     # Overload readline's addHistory to save to our history file
     rl_addHistory = rl._addHistory
