@@ -148,6 +148,8 @@ setup = var_word:var_word space "=" space { return var_word; }
 setting =
     space set:setup pipeline:pipeline
     { return [{cmd: ['set', set.slice(1), {sub: [pipeline]}]}]; }
+    / space set:setup
+    { return [{cmd: ['set', set.slice(1)]}]; }
 
 kv =
     k:valid_key col v:start_cmd { return {key: k, val: v}; }

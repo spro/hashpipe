@@ -109,12 +109,10 @@ tests.vars =
     cmd: """ $frank = 5 ; echo $frank """
     expected: '5'
 
-# Test creating an object
+# Test object variables, variable @-expressions, `;` separated results
 tests.obj_cmd =
     cmd: """ {test: 'ok'} """
     expected: {test: 'ok'}
-
-# Test object variables, variable @-expressions, `;` separated results
 tests.obj_vars =
     cmd: """ $fred = {name: "Fred"} ; echo $( $fred @ name ) """
     expected: 'Fred'

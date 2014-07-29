@@ -152,7 +152,8 @@ module.exports = (function() {
         peg$c112 = function(alias, rest) { return [{cmd: ['alias', alias, rest.join('').trim()]}]; },
         peg$c113 = function(var_word) { return var_word; },
         peg$c114 = function(set, pipeline) { return [{cmd: ['set', set.slice(1), {sub: [pipeline]}]}]; },
-        peg$c115 = function(head, tail) {
+        peg$c115 = function(set) { return [{cmd: ['set', set.slice(1)]}]; },
+        peg$c116 = function(head, tail) {
                 var kvs = [head].concat(tail.map(function(sp) { return sp[1]; }));
                 var obj_cmd = ['obj'];
                 for (var i in kvs) {
@@ -2560,6 +2561,24 @@ module.exports = (function() {
         peg$currPos = s0;
         s0 = peg$c5;
       }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parsespace();
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parsesetup();
+          if (s2 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c115(s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c5;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c5;
+        }
+      }
 
       return s0;
     }
@@ -2655,7 +2674,7 @@ module.exports = (function() {
                 }
                 if (s6 !== peg$FAILED) {
                   peg$reportedPos = s0;
-                  s1 = peg$c115(s3, s4);
+                  s1 = peg$c116(s3, s4);
                   s0 = s1;
                 } else {
                   peg$currPos = s0;
