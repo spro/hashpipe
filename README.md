@@ -29,10 +29,10 @@ words)) or [sub-pipes](#sub-pipes).
 'test'
 
 # list 1 2.5 3
-[1, 2.5, 3]
+[ 1, 2.5, 3 ]
 
 # list hello "i am dog"
-['hello', 'i am dog']
+[ 'hello', 'i am dog' ]
 ```
 
 ### Pipelines
@@ -45,7 +45,7 @@ A command's output may be piped to another command to be used as input with the
 'one two three'
 
 # echo one two three | split ' '
-['one', 'two', 'three']
+[ 'one', 'two', 'three' ]
 ```
 
 hashpipe also has special pipe operators that act over lists; the parallel `||`
@@ -54,10 +54,10 @@ and return a new list of each result.
 
 ```
 # list 1 2 3 || + 5
-[6, 7, 8]
+[ 6, 7, 8 ]
 
 # list Tom Fred George || echo Sir $!
-['Sir Tom', 'Sir Fred', 'Sir George']
+[ 'Sir Tom', 'Sir Fred', 'Sir George' ]
 ```
 
 ### Variables
@@ -72,7 +72,7 @@ Variables are designated with `$` both when setting and getting.
 'I just realized today is Wednesday.'
 
 # list Tuesday $day tomorrow
-['Tuesday', 'Wednesday', 'tomorrow']
+[ 'Tuesday', 'Wednesday', 'tomorrow' ]
 ```
 
 The special variable `$!` references the output of the last command.
@@ -89,7 +89,7 @@ substituted with its result in the outer command's argument list.
 
 ```
 # list $(4 | + 4) $(5 | - 5) $(6 | + 2)
-[8, 0, 8]
+[ 8, 0, 8 ]
 
 # echo $( echo $( echo Turtles $( echo all the way down ) ) )
 'Turtles all the way down'
@@ -99,7 +99,7 @@ Sub-pipes are passed the same input as the outer command.
 
 ```
 # list 1 2 3 || echo $( * 2 ) "/ 2"
-['2 / 2', '4 / 2', '6 / 2']
+[ '2 / 2', '4 / 2', '6 / 2' ]
 ```
 
 ### Array and object literals
@@ -109,10 +109,10 @@ with JSON-esque syntax:
 
 ```
 # list 1 2 3
-[1, 2, 3]
+[ 1, 2, 3 ]
 
 # [1, 2, 3]
-[1, 2, 3]
+[ 1, 2, 3 ]
 ```
 
 Objects may also be defined either with the `obj [key] [value]` command or
@@ -120,13 +120,13 @@ JSON-esque syntax:
 
 ```
 # obj first Freddy last Todd
-{first: 'Freddy', last: 'Todd'}
+{ first: 'Freddy', last: 'Todd' }
 
 # {first: "Freddy", last: "Todd"}
-{first: 'Freddy', last: 'Todd'}
+{ first: 'Freddy', last: 'Todd' }
 
 # [{a: 1}, obj "b" 2, {'d': 3}, list 4 5 6]
-[{a: 1}, {b: 2}, {d: 3}, [4, 5, 6]]
+[ { a: 1 }, { b: 2 }, { d: 3 }, [ 4, 5, 6 ] ]
 ```
 
 Note that though strings may be either quoted or bare in the command syntax,
@@ -148,6 +148,7 @@ array indices.
 ```
 # {name: "Fred", age: 42} @ .name
 'Fred'
+
 # ['a', 'b', 'c'] @ .0
 'a'
 ```
@@ -174,7 +175,7 @@ new array with the results.
 
 ```
 # [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name
-['Fred', 'Paul', 'Sam']
+[ 'Fred', 'Paul', 'Sam' ]
 ```
 
 Map also works for array indices. The *get* and *map* operators can be chained
@@ -182,7 +183,8 @@ freely:
 
 ```
 # [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name:0
-['F', 'P', 'S']
+[ 'F', 'P', 'S' ]
+
 # [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name:0.0
 'F'
 ```
@@ -194,14 +196,14 @@ object to form an array.
 
 ```
 # {name: "Fred", happy: true, kind: 'dog'} @ [name, happy]
-['Fred', true]                                                    
+[ 'Fred', true ]
 ```
 
-The accessors within multi-get expressions are of course chainable:
+Each member of a multi-get is a full expression, so accessors may be chained:
 
 ```
 # {name: "Sam", pets: [{name: 'Woofer'}, {name: 'Barky'}]} @ [name, pets:name]
-['Sam', ['Woofer', 'Barky']]
+[ 'Sam', [ 'Woofer', 'Barky' ] ]
 ```
 
 #### Multi-get with `{key: expression, ...}`
@@ -211,25 +213,53 @@ return an object of named values. If an accessor expression is not specified,
 the key name is used instead.
 
 ```
-# {name: "Fred", happy: true, kind: 'dog'} @ {n: name, h: happy}
-{n: 'Fred', h: true}
-
-# {name: "Fred", happy: true, kind: 'dog'} @ {name, h: happy}
-{name: 'Fred', h: true}
-```
-
-Again, chainable and nestable.
-
-```
 # $fred = {name: 'Fred', age: 42, happy: true}
 
-# $fred @ [name, {age, happy}]
-['Fred', {age: 42, happy: true}]
+# $fred @ {n: name, h: happy}
+{ n: 'Fred', h: true }
 
-# $fred @ [name, {age, mood: {happy}}]
-['Fred', {age: 42, mood: {happy: true}}]
+# $fred @ {name, h: happy}
+{ name: 'Fred', h: true }
 ```
 
+Again, each member is a full expression, allowing for chaining and nesting.
 
+```
+# $fred @ [name, {age, happy}]
+[ 'Fred', { age: 42, happy: true } ]
 
+# $fred @ [name, {age, mood: {happy}}]
+[ 'Fred', { age: 42, mood: { happy: true } } ]
+```
+
+**Note:** the special `.` expression may be used within a multi-get to return
+the full input.
+
+```
+# $fred @ {name, self: .}
+{ name: 'Fred',          
+  self: { name: 'Fred', age: 42, happy: true } } 
+```
+
+#### Sub-pipes as '@'-expressions
+
+Transformations may be applied by using sub-pipes as `@`-expressions. Most
+useful in a multi-get array or object.
+
+**Note:** the input to the sub-pipe will be the current context of the
+`@`-expression. Further `@`-expressions may be used within sub-pipes to specify
+accessors to act on.
+
+```
+# {name: "Woofer", dog_years: 6} @ {name, human_years: $(@ dog_years | * 7)}
+{ name: 'Woofer', human_years: 42 }
+
+# {dogs: [{name: "Barky"}, {name: "Woofer"}]} @ dogs:name:{name: ., yelling: $(upper)}
+[ { name: 'Barky', yelling: 'BARKY' },
+  { name: 'Woofer', yelling: 'WOOFER' } ]
+
+# list {name: "Barky", dog_years: 5} {name: "Woofer", dog_years: 6} @ :{name, human_years: $(@ dog_years | * 7)}
+[ { name: 'Barky', human_years: 35 },
+  { name: 'Woofer', human_years: 42 } ]
+```
 
