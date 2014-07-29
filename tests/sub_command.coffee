@@ -117,10 +117,23 @@ tests.obj_vars =
     cmd: """ $fred = {name: "Fred"} ; echo $( $fred @ name ) """
     expected: 'Fred'
 
-# Test using objects within expressions
+# Boolean parsing and not parsing
+tests.parse_bool =
+    cmd: """ true """
+    expected: true
+tests.dont_parse_bool =
+    cmd: """ trueth """
+    expected: undefined
+
+# Raw list syntax
+tests.list_cmd =
+    cmd: """ [1, 2, [3, 4]] @ 2.1 """
+    expected: 4
+
+# Lists and objects combined
 tests.list_objs =
-    cmd: """ list {name: "Fred"} {name: "Sam"} @ 1.name """
-    expected: 'Sam'
+    cmd: """ [{name: "Jeorge", age: 55}, {name: "Fredrick", pets: ['Kangaroo', 'Dog']}] @ 1.pets.1 | reverse """
+    expected: 'goD'
 
 # Setting and using aliases
 tests.set_alias =
