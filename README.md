@@ -21,8 +21,8 @@ At a glance:
 ### Commands
 
 As in bash, a command is followed by space-separated arguments; arguments may
-be literal values (objects, arrays, numbers, booleans, strings (quoted or bare
-words)) or [sub-pipes](#sub-pipes).
+be bare words (interpreted as strings), [literal values](#literals), [arrays,
+objects](#arrays-and-objects), or [sub-pipes](#sub-pipes).
 
 ```
 # echo test
@@ -35,10 +35,70 @@ words)) or [sub-pipes](#sub-pipes).
 [ 'hello', 'i am dog' ]
 ```
 
+### Literals
+
+Hashpipe supports a few basic types as literals: Numbers, strings and booleans.
+They may be used as command arguments or alone (using them alone is actually a
+shortcut for the `val` command).
+
+```
+# 4.20
+4.2
+
+# "Testing this"
+'Testing this'
+
+# true
+true
+
+# val 5.25
+5.25
+
+# val woof
+'woof'
+```
+
+**Note:** though strings may be bare words when used as arguments, in most
+other places the quotes are required.
+
+### Arrays and objects
+
+There are two ways to express a list; using the `list [value]...` command or
+with a JSON-esque syntax:
+
+```
+# list 1 2 3
+[ 1, 2, 3 ]
+
+# [1, 2, 3]
+[ 1, 2, 3 ]
+```
+
+Objects may be defined either with the `obj [key] [value]...` command or
+JSON-esque syntax:
+
+```
+# obj first Freddy last Todd
+{ first: 'Freddy', last: 'Todd' }
+
+# {first: "Freddy", last: "Todd"}
+{ first: 'Freddy', last: 'Todd' }
+```
+
+When using the JSON-esque syntaxes, values may be commands themselves:
+
+```
+# {a: list 1 2}
+{ a: [ 1, 2 ] }
+
+# [{a: 1}, obj "b" 2, {'d': 3}, list 4 5 6]
+[ { a: 1 }, { b: 2 }, { d: 3 }, [ 4, 5, 6 ] ]
+```
+
 ### Pipelines
 
-A command's output may be piped to another command to be used as input with the
-`|` operator.
+A command's output may be piped to another to be used as input with the `|`
+operator.
 
 ```
 # echo one two three
@@ -79,7 +139,7 @@ The special variable `$!` references the output of the last command.
 
 ```
 # list a b c | length | echo There were $! letters in there.
-'There like 3 letters in there.'
+'There were 3 letters in there.'
 ```
 
 ### Sub-pipes
@@ -101,36 +161,6 @@ Sub-pipes are passed the same input as the outer command.
 # list 1 2 3 || echo $( * 2 ) "/ 2"
 [ '2 / 2', '4 / 2', '6 / 2' ]
 ```
-
-### Array and object literals
-
-You've seen the `list [item]...` command a few times; the same can be written
-with JSON-esque syntax:
-
-```
-# list 1 2 3
-[ 1, 2, 3 ]
-
-# [1, 2, 3]
-[ 1, 2, 3 ]
-```
-
-Objects may also be defined either with the `obj [key] [value]` command or
-JSON-esque syntax:
-
-```
-# obj first Freddy last Todd
-{ first: 'Freddy', last: 'Todd' }
-
-# {first: "Freddy", last: "Todd"}
-{ first: 'Freddy', last: 'Todd' }
-
-# [{a: 1}, obj "b" 2, {'d': 3}, list 4 5 6]
-[ { a: 1 }, { b: 2 }, { d: 3 }, [ 4, 5, 6 ] ]
-```
-
-Note that though strings may be either quoted or bare in the command syntax,
-all strings must be quoted in the JSON-esque syntax.
 
 ### `@`-expressions
 
