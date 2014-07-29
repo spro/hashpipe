@@ -22,7 +22,7 @@ At a glance:
 
 As in bash, a command is followed by space-separated arguments; arguments may
 be literal values (objects, arrays, numbers, booleans, strings (quoted or bare
-words)) or (sub-commands)[#Sub-commands].
+words)) or [sub-pipes](#sub-pipes).
 
 ```
 # echo test
@@ -134,93 +134,102 @@ all strings must be quoted in the JSON-esque syntax.
 
 ### `@`-expressions
 
-Here's where things deviate from the known path.
+An `@`-expression is a special command suffix used to traverse and transform
+objects, resulting in new objects or values. They may occur at the end of any
+command. 
 
-An `@`-expression can occur after any command that has output. It acts as a
-member of the pipeline, taking in the output of the last command and feeding
-its own output to the next. Expressions consist of a series of operators that
-form a pipeline of their own.
-
-#### `@` is for attribute
+#### Getting with `.accessor`
 
 The simplest use case for `@` is accessing the attributes of an object, or
-items of an array, with the `.` or *get* operator. The syntax mimics the `.`
-syntax of javascript objects, except that it applies to both object keys and
+items of an array, with the `.` or *get* operator. It is similar to the `.`
+syntax for javascript objects, except that it applies to both object keys and
 array indices.
 
-Let's say we have a command `dog_people` that outputs a list of two people and
-their dogs, as seen above. To access the second item of that list, we would use
-the numeric index 1:
-
 ```
-# dog_people @ 1
-```
-
-... which leaves us with Fred, all alone with no dogs.
-
-```js
-{ name: "fred", dogs: [] }
+# {name: "Fred", age: 42} @ .name
+'Fred'
+# ['a', 'b', 'c'] @ .0
+'a'
 ```
 
-We can chain attributes with `.` to descend further into the object:
+We can chain attributes with `.` to descend further into an object:
 
 ```
-# dog_people @ 1.name
+# [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ .1.name
+'Paul'
 ```
 
-Leaving us with just `"fred"`.
-
-This of course can be extended as far into the object as necessary, e.g. to get
-the age of Woofer:
+For simplicity, the leading `.` is implied.
 
 ```
-# dog_people @ 0.dogs.1.age
+# {name: "Fred", age: 42} @ name
+'Fred'
 ```
 
-### Mapping with `:`
+#### Mapping with `:accessor`
 
 To access one key of an array of objects, we can use the `:` or *map* operator.
-The map operator applies an accessor to each item of an array.
+The map operator applies an accessor to each item of an array, and returns a
+new array with the results.
 
 ```
-# dog_people @ :dog
+# [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name
+['Fred', 'Paul', 'Sam']
 ```
 
-```js
-["bill", "fred"]
-```
-
----
-
-*TODO:* Finish writing this. Readers: some `@` syntax is covered in
-https://github.com/spro/wwwsh/blob/master/docs/SYNTAX.md, but there is more to
-be said about the new parallel piping and sub-command features.
-
----
-
-## Builtins
-
-Echo:
+Map also works for array indices. The *get* and *map* operators can be chained
+freely:
 
 ```
-# echo hello
-"hello"
+# [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name:0
+['F', 'P', 'S']
+# [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name:0.0
+'F'
 ```
 
-Identity:
+#### Multi-get with `[expression, ...]`
+
+With the multi-get syntax, several attributes can be plucked off a single
+object to form an array.
 
 ```
-# echo "who am i?"
-"who am i?"
-# echo "who am i?" | id
-"who am i?"
+# {name: "Fred", happy: true, kind: 'dog'} @ [name, happy]
+['Fred', true]                                                    
 ```
 
-Arithmetic:
+The accessors within multi-get expressions are of course chainable:
 
 ```
-# + 1 2
-3
-# * 6 7 10
-420
+# {name: "Sam", pets: [{name: 'Woofer'}, {name: 'Barky'}]} @ [name, pets:name]
+['Sam', ['Woofer', 'Barky']]
 ```
+
+#### Multi-get with `{key: expression, ...}`
+
+Similar to the array-based multi-get, you can use the object-based multi-get to
+return an object of named values. If an accessor expression is not specified,
+the key name is used instead.
+
+```
+# {name: "Fred", happy: true, kind: 'dog'} @ {n: name, h: happy}
+{n: 'Fred', h: true}
+
+# {name: "Fred", happy: true, kind: 'dog'} @ {name, h: happy}
+{name: 'Fred', h: true}
+```
+
+Again, chainable and nestable.
+
+```
+# $fred = {name: 'Fred', age: 42, happy: true}
+
+# $fred @ [name, {age, happy}]
+['Fred', {age: 42, happy: true}]
+
+# $fred @ [name, {age, mood: {happy}}]
+['Fred', {age: 42, mood: {happy: true}}]
+```
+
+
+
+
