@@ -153,44 +153,10 @@ builtins.split = (inp, args, ctx, cb) -> cb null, inp.split(args[0] || '\n')
 builtins.uniq = (inp, args, ctx, cb) -> cb null, _.uniq inp
 builtins.flatten = (inp, args, ctx, cb) -> cb null, _.flatten inp
 
+builtins.trim = (inp, args, ctx, cb) -> cb null, (args[0] || inp).trim()
+
 builtins.sleep = (inp, args, ctx, cb) ->
     setTimeout (-> cb null, inp), Number args[0]
-
-# Environmental parasites
-
-builtins.set = (inp, args, ctx, cb) ->
-    data = args[1] || inp
-    ctx.set 'vars', args[0], data
-    cb null, data
-
-# `inc` increments a number given a key
-builtins.inc = (inp, args, ctx, cb) ->
-    inc_key = args[0]
-    ctx[inc_key] = 0 if !ctx[inc_key]?
-    cb null, ++ctx[inc_key]
-
-# `push` adds input to the end of the specified array
-builtins.push = (inp, args, ctx, cb) ->
-    data = args[1] || inp
-    l = ctx.get('vars', args[0]) || []
-    l.push data
-    ctx.set('vars', args[0], l)
-    cb null, l
-
-# `ginc` gets or increments a number given a key and object key
-builtins.ginc = (inp, args, ctx, cb) ->
-    inc_key = args[0]
-    obj_key = args[1]
-    if !ctx[inc_key]?
-        ctx[inc_key] =
-            val: 0
-            objs: {}
-    if ctx[inc_key].objs[obj_key]?
-        cb null, ctx[inc_key].objs[obj_key]
-    else
-        obj_val = ++ctx[inc_key].val
-        ctx[inc_key].objs[obj_key] = obj_val
-        cb null, obj_val
 
 # Matching, filtering
 
@@ -337,6 +303,64 @@ builtins.randomSample = (inp, args, ctx, cb) ->
     cb null, _.sample inp, args[0] || inp.length/2
 builtins.shuffle = (inp, args, ctx, cb) ->
     cb null, _.shuffle inp
+
+# Array functions
+
+builtins.zip = (inp, args, ctx, cb) ->
+    if _.every args, _.isArray
+        cb null, _.zip args...
+    else # split one list of args into two
+        args.push null if args.length%2 == 1
+        l1 = _.first args, args.length/2
+        l2 = _.last args, args.length/2
+        cb null, _.zip l1, l2
+
+builtins.zipobj = (inp, args, ctx, cb) ->
+    builtins.zip inp, args, ctx, (err, zipped) ->
+        cb null, _.object zipped
+
+# Modifying the environment
+# ------------------------------------------------------------------------------
+
+builtins.set = (inp, args, ctx, cb) ->
+    data = args[1] || inp
+    ctx.set 'vars', args[0], data
+    cb null, data
+
+builtins.setall = (inp, args, ctx, cb) ->
+    data = args[1] || inp
+    for k, v of data
+        ctx.set 'vars', k, v
+    cb null, data
+
+# `inc` increments a number given a key
+builtins.inc = (inp, args, ctx, cb) ->
+    inc_key = args[0]
+    ctx[inc_key] = 0 if !ctx[inc_key]?
+    cb null, ++ctx[inc_key]
+
+# `push` adds input to the end of the specified array
+builtins.push = (inp, args, ctx, cb) ->
+    data = args[1] || inp
+    l = ctx.get('vars', args[0]) || []
+    l.push data
+    ctx.set('vars', args[0], l)
+    cb null, l
+
+# `ginc` gets or increments a number given a key and object key
+builtins.ginc = (inp, args, ctx, cb) ->
+    inc_key = args[0]
+    obj_key = args[1]
+    if !ctx[inc_key]?
+        ctx[inc_key] =
+            val: 0
+            objs: {}
+    if ctx[inc_key].objs[obj_key]?
+        cb null, ctx[inc_key].objs[obj_key]
+    else
+        obj_val = ++ctx[inc_key].val
+        ctx[inc_key].objs[obj_key] = obj_val
+        cb null, obj_val
 
 # Including modules
 
