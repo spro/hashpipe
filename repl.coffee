@@ -138,7 +138,7 @@ else
     # Stand-alone mode
     repl = new PipelineREPL
 
-    if script_filename = argv.script || argv.s
+    if script_filename = argv.run || argv.r
         # Execute single script
         script = fs.readFileSync(script_filename).toString()
         setTimeout ->
@@ -146,6 +146,14 @@ else
                 process.exit()
         , 50
 
+    else if script_filename = argv.load || argv.l
+        # Execute single script
+        console.log "Reading from #{ script_filename }..."
+        script = fs.readFileSync(script_filename).toString()
+        setTimeout ->
+            repl.executeScript script, ->
+                repl.startReadline()
+        , 50
+
     else
         repl.startReadline()
-
