@@ -7,4 +7,3 @@ exports.connect = (config) ->
             redis_client[args[0]] args.slice(1)..., (err, ret) ->
                 cb null, ret
 
-

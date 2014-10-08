@@ -293,10 +293,12 @@ randstr = (len=5) ->
     while s.length < len
         s += Math.random().toString(36).slice(2, len-s.length+2)
     return s
+
 randint = (max=100) ->
     return Math.floor(Math.random() * max)
 builtins.randstr = (inp, args, ctx, cb) -> cb null, randstr args[0]
 builtins.randint = (inp, args, ctx, cb) -> cb null, randint args[0]
+
 builtins.randomChoice = (inp, args, ctx, cb) ->
     cb null, _.sample(inp, 1)[0]
 builtins.randomSample = (inp, args, ctx, cb) ->
