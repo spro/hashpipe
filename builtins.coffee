@@ -2,6 +2,7 @@ fs = require 'fs'
 _ = require 'underscore'
 util = require 'util'
 _inspect = (o) -> util.inspect o, depth: null
+helpers = require './helpers'
 
 module.exports = builtins = {}
 
@@ -101,10 +102,6 @@ builtins.obj = (inp, args, ctx, cb) ->
             i+=2
     cb null, abj
 
-# Attach values of one object onto another
-builtins.extend = (inp, args, ctx, cb) ->
-    cb null, _.extend inp, args[0]
-
 # range #start? #stop -> [#i]
 builtins.range = (inp, args, ctx, cb) ->
     if args.length == 2
@@ -114,18 +111,6 @@ builtins.range = (inp, args, ctx, cb) ->
         i0 = 0
         i1 = num(args[0]) - 1
     cb null, [i0 .. i1]
-
-# {obj} -> keys -> [keys]
-builtins.keys = (inp, args, ctx, cb) ->
-    cb null, _.keys inp
-
-# {obj} -> values -> [values]
-builtins.values = (inp, args, ctx, cb) ->
-    cb null, _.values inp
-
-# {obj} -> items -> [[key, value]]
-builtins.pairs = builtins.items = (inp, args, ctx, cb) ->
-    cb null, _.pairs inp
 
 # String operations
 
@@ -286,7 +271,7 @@ builtins.slice = (inp, args, ctx, cb) ->
 
 builtins.now = (inp, args, ctx, cb) -> cb null, new Date
 builtins.timestamp = (inp, args, ctx, cb) -> cb null, new Date().getTime()
-builtins['oid-timestamp'] = (inp, args, ctx, cb) -> cb null, (parseInt(inp.toString().substring(0, 8), 16) * 1000)
+builtins['oid-timestamp'] = (inp, args, ctx, cb) -> cb null, (parseInt((args[0] || inp).toString().substring(0, 8), 16) * 1000)
 
 randstr = (len=5) ->
     s = ''
@@ -303,8 +288,6 @@ builtins.randomChoice = (inp, args, ctx, cb) ->
     cb null, _.sample(inp, 1)[0]
 builtins.randomSample = (inp, args, ctx, cb) ->
     cb null, _.sample inp, args[0] || inp.length/2
-builtins.shuffle = (inp, args, ctx, cb) ->
-    cb null, _.shuffle inp
 
 # Array functions
 
@@ -320,6 +303,18 @@ builtins.zip = (inp, args, ctx, cb) ->
 builtins.zipobj = (inp, args, ctx, cb) ->
     builtins.zip inp, args, ctx, (err, zipped) ->
         cb null, _.object zipped
+
+# Underscore methods
+# ------------------------------------------------------------------------------
+
+umethods = _.pick(_, [
+    'extend', 'keys', 'values', 'pairs', 'pick', 'omit',
+    'where', 'findWhere',
+    'sortBy', 'groupBy', 'indexBy', 'countBy',
+    'shuffle'
+])
+# Wrap them using `sync` and `with_inp` options
+_.extend builtins, helpers.wrapall umethods, '', true, true
 
 # Modifying the environment
 # ------------------------------------------------------------------------------

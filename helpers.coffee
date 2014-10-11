@@ -3,15 +3,21 @@ util = require 'util'
 exports.prettyPrint = (o) ->
     return util.inspect o, depth: null, colors: true
 
-exports.wrapone = wrapone = (f) ->
+exports.wrapone = wrapone = (f, with_inp=false) ->
     (inp, args, ctx, cb) ->
-        console.log 'running ' + f
+        args.unshift(inp) if with_inp
         f args..., cb
 
-exports.wrapall = (o, pre='') ->
+exports.wraponeSync = wraponeSync = (f, with_inp=false) ->
+    (inp, args, ctx, cb) ->
+        args.unshift(inp) if with_inp
+        cb null, f args...
+
+exports.wrapall = (o, pre='', with_inp=false, sync=false) ->
     wo = {}
     for k, f of o
         if typeof f == 'function'
-            wo[pre+k] = wrapone f
+            wrapf = if sync then wraponeSync else wrapone
+            wo[pre+k] = wrapf f, with_inp
     wo
 
