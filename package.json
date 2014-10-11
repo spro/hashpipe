@@ -1,6 +1,6 @@
 {
     "name": "hashpipe",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Object oriented shell experiment",
     "homepage": "http://github.com/qnectar/hashpipe",
     "repository": {
@@ -20,6 +20,7 @@
         "jsdom": "0.x.x",
         "jquery": "2.x.x",
         "minimist": "0.2.x",
+        "moment": "2.7.x",
         "readline-vim": "0.3.x",
         "redis": "0.10.x",
         "request": "2.x.x",
