@@ -308,7 +308,8 @@ builtins.zipobj = (inp, args, ctx, cb) ->
 # ------------------------------------------------------------------------------
 
 umethods = _.pick(_, [
-    'extend', 'keys', 'values', 'pairs', 'pick', 'omit',
+    'keys', 'values', 'pairs',
+    'pick', 'omit', 'extend', 'defaults',
     'where', 'findWhere',
     'sortBy', 'groupBy', 'indexBy', 'countBy',
     'shuffle'
