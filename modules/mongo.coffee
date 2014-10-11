@@ -33,8 +33,9 @@ exports.connect = (config) ->
                     args[1],
                     mongodb.Server(config?.host || 'localhost', 27017),
                     safe: true
-                ).open (err, db) -> locals.db = db
-                cb null, success: true
+                ).open (err, db) ->
+                    locals.db = db
+                    cb null, success: true
 
             else if command == 'find'
                 locals.db.collection(collection)[command](query, options).toArray cb
