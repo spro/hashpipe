@@ -37,6 +37,15 @@ exports.connect = (config) ->
                     locals.db = db
                     cb null, success: true
 
+            else if command in ['eval']
+                locals.db[command](args.slice(1)..., cb)
+
+            else if command == 'collections'
+                locals.db.collectionNames(cb)
+
+            else if command == 'dbs'
+                locals.db.eval("db.getMongo().getDBNames()", cb)
+
             else if command == 'find'
                 locals.db.collection(collection)[command](query, options).toArray cb
 
