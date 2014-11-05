@@ -1,3 +1,4 @@
+#!/usr/bin/env coffee
 readline = require 'readline'
 readline_vim = require 'readline-vim'
 {Pipeline} = require './pipeline'
@@ -7,7 +8,7 @@ ansi = require('ansi')(process.stdout)
 fs = require 'fs'
 path = require 'path'
 _ = require 'underscore'
-argv = require('minimist')(process.argv)
+argv = require('yargs').argv
 util = require 'util'
 
 # Helper functions
@@ -99,11 +100,15 @@ PipelineREPL::startReadline = ->
     rl.prompt()
 
     # Interpret input as scripts and run
+    run_once = @run_once || !process.stdin.isTTY
     rl.on 'line', (script) ->
         script = script.trim()
         script = 'id' if !script.length
         repl.executeScript script, ->
-            rl.prompt()
+            if run_once
+                process.exit()
+            else
+                rl.prompt()
 
 # Prompt helpers
 
@@ -157,3 +162,4 @@ else
 
     else
         repl.startReadline()
+
