@@ -1,4 +1,4 @@
-padded = (s, n=15) ->
+padded = (s, n=40) ->
     make_padding(n - s.length) + s
 
 make_padding = (n) ->
@@ -12,10 +12,11 @@ make_histogram = (l, x='#') ->
             n = n.count
         else
             r = ''
-        for i in [0..n]
+        for i in [0..n-1]
             r += x
         rows.push r
     rows.join '\n'
 
 exports.histogram = (inp, args, ctx, cb) ->
     cb null, make_histogram(inp || args[0])
+
