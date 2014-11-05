@@ -87,8 +87,8 @@ feedFetchStream = (stream, path, args, limit=default_limit, offset=0) ->
 
     return stream # Return the stream for chainability
 
-# Fetchers
-# ==============================================================================
+# Generic methods
+# ------------------------------------------------------------------------------
 
 # Resolve a Soundcloud URL
 resolve = (url) ->
@@ -104,10 +104,13 @@ getResource = (path) ->
     fetchStream(path)
 
 getTrack = (track) ->
-    getResource("tracks/#{ track.id }")
+    fetchStream("tracks/#{ track.id }")
 
 getUser = (user) ->
-    getResource("users/#{ user.id }")
+    fetchStream("users/#{ user.id }")
+
+# User methods
+# ------------------------------------------------------------------------------
 
 # Get a users's followings
 getFollowings = (user, limit=10) ->
@@ -124,9 +127,28 @@ getFavorites = (user, limit=50) ->
     fetchStream("users/#{ user.id }/favorites", null, limit)
         #.doto(dolog "getFavorites #{ user.id }") # print each one
 
+# Song methods
+# ------------------------------------------------------------------------------
+
 getSongFavoriters = (song, limit=50) ->
     fetchStream("tracks/#{ song.id }/favoriters", null, limit)
         #.doto(dolog "getSongFavorites #{ song_id }") # print each one
+
+# Searches
+# ------------------------------------------------------------------------------
+
+searchTracks = (query, limit=50) ->
+    fetchStream("tracks", q: query, limit)
+        #.doto(dolog "searchTracks #{ query }") # print each one
+
+searchUsers = (query, limit=50) ->
+    fetchStream("users", q: query, limit)
+        #.doto(dolog "searchUsers #{ query }") # print each one
+
+# Export
+# ==============================================================================
+
+# Wrap stream methods as node-style callbacks for export
 
 wrapStream = (method) ->
     (inp, args, ctx, cb) ->
@@ -149,6 +171,8 @@ module.exports = _.extend({}, mapobjwith(wrapStream)({
     getTracks
     getFavorites
     getSongFavoriters
+    searchTracks
+    searchUsers
 }), mapobjwith(wrapCallback)({
     resolveOne
 }))
