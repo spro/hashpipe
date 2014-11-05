@@ -117,6 +117,9 @@ builtins.range = (inp, args, ctx, cb) ->
 builtins.upper = (inp, args, ctx, cb) -> cb null, inp.toUpperCase()
 builtins.lower = (inp, args, ctx, cb) -> cb null, inp.toLowerCase()
 
+capitalize = (s) -> s[0].toUpperCase() + s.slice(1)
+builtins.capitalize = (inp, args, ctx, cb) -> cb null, capitalize inp
+
 # List operations
 
 builtins.length = (inp, args, ctx, cb) -> cb null, inp.length
@@ -172,13 +175,14 @@ builtins.filter = (inp, args, ctx, cb) ->
 
 # Pass through without altering input (isn't this id?)
 builtins.tee = (inp, args, ctx, cb) ->
+    console.log _inspect inp
     cb null, inp
 
 builtins.parse = (inp, args, ctx, cb) ->
     cb null, JSON.parse inp
 
 builtins.log = (inp, args, ctx, cb) ->
-    console.log args.join ' '
+    console.log inp || args.join ' '
     cb null, inp
 
 builtins.inspect = (inp, args, ctx, cb) ->
