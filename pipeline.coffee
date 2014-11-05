@@ -98,9 +98,9 @@ class Pipeline extends Scope
             cb "Error executing pipeline: " + e
         return ctx
 
-    execFile: (script_filename, inp, cb) ->
+    execFile: (script_filename, inp, ctx, cb) ->
         script = fs.readFileSync(script_filename).toString()
-        @exec script, inp, cb
+        @exec script, inp, ctx, cb
 
 # Parse a command pipeline into a series of tokens
 # that can be passed to `runPipeline`
