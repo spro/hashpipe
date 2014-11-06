@@ -53,6 +53,9 @@ joinedargs = (f, c=' ') ->
 # Define methods
 # ------------------------------------------------------------------------------
 
+head = wrapinsync (items, n) -> items[..n-1]
+tail = wrapinsync (items, n) -> items[-1*n..]
+
 echo = wrapsync (s...) -> s.join(' ')
 join = wrapinsync (s, c=' ') -> s.join(c)
 
@@ -95,6 +98,8 @@ filter = (inp, f, cb) ->
     async.filter inp, _execLambda, (result) -> cb null, result
 
 methods = {
+    head
+    tail
     echo
     join
     range
