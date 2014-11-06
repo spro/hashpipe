@@ -1,0 +1,96 @@
+// Define grammar
+// ------------------------------------------------------------------------------
+// 
+// TODO
+// * Aliasing
+// * JSON obj/list parsing
+// * @ commands
+// Integrate from existing?
+
+start = phrases
+
+// Phrases (lines)
+
+phrases =
+    head:phrase
+    tail:(sep p:phrase { return p; })*
+    { return [head].concat(tail); }
+phrase = aliasing / sections
+
+// Sections (commands and sub-phrases)
+
+sections =
+    head:source_section
+    tail:piped_sections
+    { return [head].concat(tail); }
+
+source_section =
+    s:section { s.type = 'source'; return s; }
+
+piped_section =
+    ppipe s:section { s.type = 'map'; return s; } /
+    pipe s:section { s.type = 'pipe'; return s; }
+piped_sections = (piped_section)*
+
+section =
+    head:method
+    args:(Space a:arg { return a; })*
+    { head.args = args; return head; }
+
+// Aliasing
+
+aliasing =
+    "alias =" w:word { return [{alias: w}]; }
+
+// Variables
+
+variable =
+    "$" v:word { return {var: v}; }
+
+// Letters, words, quotes
+
+letter = [a-zA-Z0-9.:<>_*/%+-=] / esc_pipe / newline
+anyletter = newline / [^\\"]
+quoted = quot ls:anyletter* quot { return ls.join(''); }
+
+word = ls:letter+ { return ls.join(''); }
+
+sub_phrase = doloparen p:phrase cparen { return {sub: p}; }
+lambda_phrase = oparen p:phrase cparen { return {lambda: p}; }
+
+method = sub_phrase / lambda_phrase / variable
+    / n:number { return {number: n}; }
+    / q:quoted { return {string: q}; }
+    / w:word { return {method: w}; }
+
+arg = sub_phrase / lambda_phrase / variable
+    / n:number { return {number: n}; }
+    / q:quoted { return {string: q}; }
+    / w:word { return {string: w}; }
+
+// Numbers
+
+numeral = [0-9]
+number = ns:(_ns:numeral+ { return _ns.join(''); })
+         ds:("." _ds:numeral+ { return _ds.join(''); })?
+    {
+        var n = parseInt(ns); var d = 0;
+        if (ds != null) d = parseInt(ds) / Math.pow(10.0, ds.length);
+        return n + d;
+    }
+
+// Characters & symbols
+
+oparen = space "(" space
+doloparen = space "$(" space
+cparen = space ")"
+sep = space "\n" / ";" space
+ppipe = space "||" space
+pipe = space "|" space
+esc_pipe = "\\|" { return "|" }
+quot = "\""
+newline = "\\n" { return "\n" }
+
+space = [ \t]* "\n" [ \t]+ / [ \t]*
+Space = [ \t]* "\n" [ \t]+ / [ \t]+
+
