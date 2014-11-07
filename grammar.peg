@@ -45,11 +45,12 @@ aliasing =
 // Variables
 
 variable =
-    "$" v:word { return {var: v}; }
+    "$" v:[\w]+ { return {var: v}; }
+    / "$!" { return {inp: true}; }
 
 // Letters, words, quotes
 
-letter = [a-zA-Z0-9.:<>_*/%+-=] / esc_pipe / newline
+letter = [a-zA-Z0-9.:<>_*/%$!?+-=] / esc_pipe / newline
 anyletter = newline / [^\\"]
 quoted = quot ls:anyletter* quot { return ls.join(''); }
 

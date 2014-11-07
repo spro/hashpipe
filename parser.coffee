@@ -31,23 +31,23 @@ get https://api.github.com/users/substack/repos
 # ------------------------------------------------------------------------------
 
 wrapsync = (f) ->
-    (inp, args..., cb) ->
+    (ctx, inp, args..., cb) ->
         cb null, f args...
 
 wrapinsync = (f) ->
-    (inp, args..., cb) ->
+    (ctx, inp, args..., cb) ->
         cb null, f inp, args...
 
 wrapasync = (f) ->
-    (inp, args..., cb) ->
+    (ctx, inp, args..., cb) ->
         f args..., cb
 
 listargs = (f, c=' ') ->
-    (inp, args..., cb) ->
+    (ctx, inp, args..., cb) ->
         f inp, args, cb
 
 joinedargs = (f, c=' ') ->
-    (inp, args..., cb) ->
+    (ctx, inp, args..., cb) ->
         f inp, args.join(c), cb
 
 # Define methods
@@ -63,14 +63,14 @@ list = wrapsync (items...) -> items
 
 range = wrapsync (i0, i1) -> [i0..i1-1]
 
-get = (inp, url, cb) ->
+get = (ctx, inp, url, cb) ->
     request url: url, json: true, (err, res, got) ->
         cb null, got
 
-at = (inp, key, cb) ->
+at = (ctx, inp, key, cb) ->
     cb null, inp[key]
 
-pick = (inp, args..., cb) ->
+pick = (ctx, inp, args..., cb) ->
     cb null, _.pick inp, args
 
 times = wrapinsync (a, b) -> a * b
@@ -90,14 +90,21 @@ split = wrapinsync (s, d='\n') ->
     s.split(d)
 length = wrapinsync (s) -> s.length
 
-filter = (inp, f, cb) ->
+filter = (ctx, inp, f, cb) ->
     console.log 'filtering by ' + inspect f.lambda
+    _execSection = (_inp, _section, _cb) ->
+        execSection ctx, _inp, _section, _cb
     _execLambda = (_inp, _cb) ->
-        async.reduce f.lambda, _inp, execSection, (err, result) ->
+        async.reduce f.lambda, _inp, _execSection, (err, result) ->
             _cb result # No err arg for filter
     async.filter inp, _execLambda, (result) -> cb null, result
 
+set = (ctx, inp, v, cb) ->
+    ctx.vars[v] = inp
+    cb null, inp
+
 methods = {
+    set
     head
     tail
     echo
@@ -132,20 +139,25 @@ methods = {
 parseScript = (script) ->
     parsed = parser.parse script
 
-execScript = (script, cb) ->
+execScript = (ctx, inp, script, cb) ->
     phrases = parseScript script
     console.log '[execScript]'
     console.log '    script:  ' + inspect script
     console.log '    phrases: ' + inspect phrases
     hr()
-    async.reduce phrases, {}, execPhrase, cb
+    _execPhrase = (_inp, _phrase, _cb) ->
+        execPhrase ctx, _inp, _phrase, _cb
+    async.reduce phrases, inp, _execPhrase, cb
 
-execPhrase = (inp, phrase, cb) ->
-    async.reduce phrase, {}, execPiping, cb
+execPhrase = (ctx, inp, phrase, cb) ->
+    console.log '[execPhrase] ' + inspect phrase; hr('- ')
+    _execPiping = (_inp, _section, _cb) ->
+        execPiping ctx, _inp, _section, _cb
+    async.reduce phrase, inp, _execPiping, cb
 
-execPiping = (inp, section, cb) ->
+execPiping = (ctx, inp, section, cb) ->
     console.log '[execSection] ' + inspect section; hr('- ')
-    _execSection = (inp, cb) -> execSection inp, section, cb
+    _execSection = (_inp, cb) -> execSection ctx, _inp, section, cb
 
     if section.type == 'map'
         async.map inp, _execSection, cb
@@ -156,42 +168,66 @@ execPiping = (inp, section, cb) ->
     else
         _execSection inp, cb
 
-execSection = (inp, section, cb) ->
+execSection = (ctx, inp, section, cb) ->
     if section.method?
-        execMethod inp, section.method, section.args, cb
+        execMethod ctx, inp, section.method, section.args, cb
 
     else if section.lambda?
-        async.reduce section.lambda, inp, execSection, cb
+        _execSection = (_inp, _section, _cb) ->
+            execSection ctx, _inp, _section, _cb
+        async.reduce section.lambda, inp, _execSection, cb
 
     else
         console.log '[execSection] Could not interpret section'
-        evalArg inp, section, cb
+        evalArg ctx, inp, section, cb
 
-execMethod = (inp, method, args, cb) ->
+execMethod = (ctx, inp, method, args, cb) ->
 
-    if method_fn = methods[method]
-        evalArgs inp, args, (err, parsed_args) ->
-            method_fn inp, parsed_args..., cb
+    if alias = ctx.aliases[method]
+        execScript ctx, inp, alias, cb
+
+    else if method_fn = methods[method]
+        evalArgs ctx, inp, args, (err, parsed_args) ->
+            method_fn ctx, inp, parsed_args..., cb
 
     else
         cb null, 'no such method'
 
-evalArgs = (inp, args, cb) ->
-    _evalArg = (arg, _cb) -> evalArg inp, arg, _cb
+evalArgs = (ctx, inp, args, cb) ->
+    _evalArg = (arg, _cb) -> evalArg ctx, inp, arg, _cb
     async.map args, _evalArg, cb
 
-evalArg = (inp, arg, cb) ->
-    if arg.string?
-        cb null, arg.string
-    else if arg.number?
+evalArg = (ctx, inp, arg, cb) ->
+    if arg.number?
         cb null, arg.number
+    else if arg.string?
+        invars = arg.string.match(/\$\w+/g) || []
+        invars = invars.map((s) -> s.slice(1))
+        cb null, replaceVars ctx, inp, invars, arg.string
+    else if arg.var?
+        cb null, ctx.vars[arg.var]
+    else if arg.inp?
+        cb null, inp
     else if arg.sub?
-        async.reduce arg.sub, inp, execSection, cb
+        _execSection = (_inp, _section, _cb) ->
+            execSection ctx, _inp, _section, _cb
+        async.reduce arg.sub, inp, _execSection, cb
     else
         cb null, arg
 
+replaceVars = (ctx, inp, vars, string) ->
+    replaced = vars.reduce ((s, v) -> s.replace '$'+v, ctx.vars[v]), string
+    replaced = replaced.replace '$!', inp
+
 # Repl
 # ------------------------------------------------------------------------------
+
+context =
+    aliases:
+        foo: 'echo test'
+        foo2: 'echo test $( foo )'
+    vars:
+        bar: 7
 
 readline = require 'readline'
 rl = readline.createInterface
@@ -207,7 +243,7 @@ rl.on 'line', (script) ->
     fs.writeFile '.last_script', script, ->
     script = 'id' if !script.length
     hr('=')
-    execScript script, (err, a) ->
+    execScript context, {}, script, (err, a) ->
         console.log inspect a
         rl.prompt()
 
