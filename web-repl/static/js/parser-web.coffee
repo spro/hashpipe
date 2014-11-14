@@ -5,7 +5,7 @@ $.get '/grammar.peg', (grammar) ->
 # Helpers
 
 inspect = (o, trim=false) ->
-    s = o.toString()
+    s = JSON.stringify(o)
     s = s.replace(/\n/g, '') if trim
     return s
 
@@ -46,23 +46,22 @@ joinedargs = (f, c=' ') ->
 # Define methods
 # ------------------------------------------------------------------------------
 
-head = wrapinsync (items, n) -> items[..n-1]
-tail = wrapinsync (items, n) -> items[-1*n..]
+methods = {}
 
-echo = wrapsync (s...) -> s.join(' ')
-join = wrapinsync (s, c=' ') -> s.join(c)
+# Strings
 
-obj = wrapsync (items...) ->
+methods.echo = wrapsync (s...) -> s.join(' ')
+methods.join = wrapinsync (s, c=' ') -> s.join(c)
+methods.trim = wrapinsync (s) -> s.trim()
+methods.split = wrapinsync (s, d='\n') -> s.split(d)
+methods.length = wrapinsync (s) -> s.length
+
+# Object generator
+
+methods.obj = wrapsync (items...) ->
     _.object _.values _.groupBy items, (e, i) -> Math.floor i/2
-list = wrapsync (items...) -> items
 
-range = wrapsync (i0, i1) -> [i0..i1-1]
-
-get = (ctx, inp, url, cb) ->
-    $.get url, (data) -> cb null, data
-
-post = (ctx, inp, url, cb) ->
-    $.post url, inp, (data) -> cb null, data
+# Object operations
 
 # Get an attribute of an object o[attr] if attr is a string, or
 # descend into the object o[attr[0]][attr[1]][...] if attr is an array
@@ -71,31 +70,48 @@ getAttr = (o, attr) ->
         attr.reduce getAttr, o
     else o[attr]
 
-at = (ctx, inp, attr..., cb) ->
+methods.at = (ctx, inp, attr..., cb) ->
     cb null, getAttr inp, attr
 
-pick = (ctx, inp, args..., cb) ->
-    cb null, _.pick inp, args
+methods.pick = listargs wrapinsync _.pick
 
-times = wrapinsync (a, b) -> a * b
-pow = wrapinsync (a, b) -> Math.pow a, b
-divide = wrapinsync (a, b) -> a / b
-modulo = wrapinsync (a, b) -> a % b
-plus = wrapinsync (a, b) -> a + b
-minus = wrapinsync (a, b) -> a - b
-eq = wrapinsync (inp, to) -> inp == to
-gt = wrapinsync (inp, to) -> inp > to
-lt = wrapinsync (inp, to) -> inp < to
-round = wrapinsync (a) -> Math.round a
+# List generators
 
-sum = wrapinsync (a) -> a.reduce (a, b) -> a + b
+methods.list = wrapsync (items...) -> items
+methods.range = wrapsync (i0, i1) -> [i0..i1-1]
 
-trim = wrapinsync (s) -> s.trim()
-split = wrapinsync (s, d='\n') ->
-    s.split(d)
-length = wrapinsync (s) -> s.length
+# List operations
 
-filter = (ctx, inp, f, cb) ->
+methods.head = wrapinsync (items, n) -> items[..n-1]
+methods.tail = wrapinsync (items, n) -> items[-1*n..]
+methods.sort = wrapinsync _.sortBy
+methods.pluck = wrapinsync _.pluck
+
+# HTTP
+
+methods.get = (ctx, inp, url, cb) ->
+    $.get url, (data) -> cb null, data
+
+methods.post = (ctx, inp, url, cb) ->
+    $.post url, inp, (data) -> cb null, data
+
+# Math
+
+methods['*'] = times = wrapinsync (a, b) -> a * b
+methods['**'] = pow = wrapinsync (a, b) -> Math.pow a, b
+methods['/'] = divide = wrapinsync (a, b) -> a / b
+methods['%'] = modulo = wrapinsync (a, b) -> a % b
+methods['+'] = plus = wrapinsync (a, b) -> a + b
+methods['-'] = minus = wrapinsync (a, b) -> a - b
+methods['>'] = gt = wrapinsync (inp, to) -> inp > to
+methods['<'] = lt = wrapinsync (inp, to) -> inp < to
+methods['=='] = eq = wrapinsync (inp, to) -> inp == to
+methods.round = wrapinsync (a) -> Math.round a
+methods.sum = wrapinsync (a) -> a.reduce (a, b) -> a + b
+
+# Filtering
+
+methods.filter = (ctx, inp, f, cb) ->
     console.log 'filtering by ' + inspect f.lambda
     _execSection = (_inp, _section, _cb) ->
         execSection ctx, _inp, _section, _cb
@@ -104,41 +120,11 @@ filter = (ctx, inp, f, cb) ->
             _cb result # No err arg for filter
     async.filter inp, _execLambda, (result) -> cb null, result
 
-set = (ctx, inp, v, cb) ->
+# Context manipulation
+
+methods.set = (ctx, inp, v, cb) ->
     ctx.vars[v] = inp
     cb null, inp
-
-methods = {
-    set
-    head
-    tail
-    echo
-    join
-    range
-    get
-    post
-    at
-    obj
-    list
-    sum
-    trim
-    split
-    length
-    filter
-    pluck: wrapinsync _.pluck
-    pick: listargs wrapinsync _.pick
-    sort: wrapinsync _.sortBy
-    '*': times
-    '**': pow
-    '/': divide
-    '%': modulo
-    '+': plus
-    '-': minus
-    '>': gt
-    '<': lt
-    '==': eq
-    round
-}
 
 # Parsing
 # ------------------------------------------------------------------------------
