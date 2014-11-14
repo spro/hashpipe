@@ -1,0 +1,82 @@
+*
+    margin: 0
+    padding: 0
+    box-sizing: border-box
+
+body
+    background: #222
+    color: #fff
+    font: 14px/18px "Fira Mono", monospace
+    padding-bottom: 30px
+
+.header
+    padding: 40px 5% 25px
+
+.header h1, .header h2
+    font-size: 1em
+    display: inline-block
+.header h1
+    font-weight: 700
+    margin-right: 1em
+.header h2
+    color: #555
+    font-weight: 400
+
+.header .right
+    float: right
+
+.header a
+    font-weight: 700
+    padding: 0 0.5em
+    cursor: pointer
+    &:hover
+        text-decoration: underline
+
+.line
+    position: relative
+
+    .prompt, .input
+        display: inline-block
+        vertical-align: top
+
+    .prompt
+        color: #777
+        width: 5%
+        text-align: right
+        padding-right: 10px
+
+    .input
+        -webkit-appearance: none
+        resize: none
+        height: auto
+        outline: none
+        border: none
+        background: rgba(#333, 0.5)
+        background: none
+        font: inherit
+        line-height: inherit
+        color: #ccc
+        width: 90%
+
+    .output
+        width: 100%
+        padding-left: 5%
+
+.line + .line
+    margin-top: 10px
+
+@media (max-width: 420px)
+
+    .header
+        padding-left: 10%
+        .right
+            display: none
+
+    .line
+        .prompt
+            width: 10%
+        .input
+            width: 85%
+        .output
+            padding-left: 10%
+

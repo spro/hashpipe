@@ -1,0 +1,70 @@
+.jsonview
+    white-space: pre-wrap
+
+    .prop
+        color: #fff
+    .string
+        white-space: pre-wrap
+        &.multiline
+            display: inline-block
+            vertical-align: text-top
+
+    .collapser
+        color: #fff
+        position: absolute
+        left: -25px
+        padding: 0 10px
+        cursor: pointer
+
+    .collapsible
+        transition: height 1.2s
+        transition: width 1.2s
+
+    .collapsible.collapsed
+        height: .8em
+        width: 1em
+        display: inline-block
+        overflow: hidden
+        margin: 0
+
+    .collapsible.collapsed:before
+        content: "..."
+        width: 1em
+        margin-left: .2em
+
+    .collapser.collapsed
+        transform: rotate(0deg)
+
+    .q
+        display: inline-block
+        width: 0px
+        color: transparent
+
+    li
+        position: relative
+
+    ul
+        list-style: none
+        margin: 0 0 0 2em
+        padding: 0
+
+    a
+        color: #38f
+
+.string
+    color: #bbb
+.num
+    color: #bd84d5
+.bool
+    color: #00b8ff
+.null
+    color: magenta
+.key
+    color: #95a5a6
+.marker
+    font-weight: 400
+    color: #999
+
+.error
+    color: #ff6655
+
