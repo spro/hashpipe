@@ -82,6 +82,7 @@ minus = wrapinsync (a, b) -> a - b
 eq = wrapinsync (inp, to) -> inp == to
 gt = wrapinsync (inp, to) -> inp > to
 lt = wrapinsync (inp, to) -> inp < to
+round = wrapinsync (a) -> Math.round a
 
 sum = wrapinsync (a) -> a.reduce (a, b) -> a + b
 
@@ -131,6 +132,7 @@ methods = {
     '>': gt
     '<': lt
     '==': eq
+    round
 }
 
 # Parsing
@@ -234,7 +236,7 @@ rl = readline.createInterface
     input: process.stdin
     output: process.stdout
 
-rl.setPrompt ' ~> '
+rl.setPrompt ' #| '
 
 # Interpret input as scripts and run
 rl.prompt()
