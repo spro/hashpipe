@@ -1,0 +1,26 @@
+Necessary
+
+- Defining aliases
+- Series pipe
+- $! input subsitution
+
+Optional
+
+- @ commands
+- Sub-pipe substitutions
+- Events (see docs/Events.txt)
+
+Modules
+
+- Flesh out HTTP (post etc.)
+- Redis
+- Mongo
+- Keywords
+- Histogram
+
+Interface
+
+- REPL with waiting indicators
+- IO commands for HTML, Images
+- IO Modules for API representations
+

@@ -1,0 +1,6 @@
+Getting user from api.randomuser.me and formatting their name, address
+putting the address on a map (if they are real)
+rendering a contact card with templates
+
+Getting reddit titles from a subreddit and ?
+top content submitters for a subreddit
