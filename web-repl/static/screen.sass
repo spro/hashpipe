@@ -4,13 +4,21 @@
     box-sizing: border-box
 
 body
-    background: #222
+    background: #161616
     color: #fff
-    font: 14px/18px "Fira Mono", monospace
+    //font: 14px/18px "Fira Mono", monospace
+    font: 13px/16px monospace
+    font: 14px/18px "Inconsolata", monospace
     padding-bottom: 30px
 
+a
+    text-decoration: none
+    color: #59d
+    &:hover
+        text-decoration: underline
+
 .header
-    padding: 40px 5% 25px
+    padding: 20px
 
 .header h1, .header h2
     font-size: 1em
@@ -24,6 +32,7 @@ body
 
 .header .right
     float: right
+    display: none
 
 .header a
     font-weight: 700
@@ -40,10 +49,11 @@ body
         vertical-align: top
 
     .prompt
-        color: #777
-        width: 5%
+        color: #555
+        width: 30px
         text-align: right
-        padding-right: 10px
+        position: absolute
+        left: 0
 
     .input
         -webkit-appearance: none
@@ -55,15 +65,28 @@ body
         background: none
         font: inherit
         line-height: inherit
-        color: #ccc
-        width: 90%
-
-    .output
+        color: #ddd
         width: 100%
-        padding-left: 5%
+        padding-left: 40px
+
+    .output, .loading
+        width: 100%
+        padding-left: 40px
+        padding-top: 5px
+        position: relative
+        &:before
+            content: '=>'
+            position: absolute
+            left: 0px
+            width: 30px
+            text-align: right
+            color: #555
+
+    .loading
+        color: #555
 
 .line + .line
-    margin-top: 10px
+    margin-top: 5px
 
 @media (max-width: 420px)
 
@@ -73,10 +96,6 @@ body
             display: none
 
     .line
-        .prompt
-            width: 10%
-        .input
-            width: 85%
         .output
             padding-left: 10%
 

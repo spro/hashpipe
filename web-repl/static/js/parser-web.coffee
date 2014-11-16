@@ -43,18 +43,29 @@ joinedargs = (f, c=' ') ->
     (ctx, inp, args..., cb) ->
         f inp, args.join(c), cb
 
-# Define methods
-# ------------------------------------------------------------------------------
+# Methods
+# ==============================================================================
 
 methods = {}
 
+# Helper for using underscore methods
+useUnderscoreMethods = (ms, wrapper=wrapinsync) ->
+    _.extend methods, mapObj(_.pick(_, ms), wrapper)
+
+methods.id = wrapinsync (v) -> v
+methods.val = wrapsync (v) -> v
+
 # Strings
+# ------------------------------------------------------------------------------
 
 methods.echo = wrapsync (s...) -> s.join(' ')
 methods.join = wrapinsync (s, c=' ') -> s.join(c)
 methods.trim = wrapinsync (s) -> s.trim()
 methods.split = wrapinsync (s, d='\n') -> s.split(d)
 methods.length = wrapinsync (s) -> s.length
+
+# Objects
+# ------------------------------------------------------------------------------
 
 # Object generator
 
@@ -70,10 +81,22 @@ getAttr = (o, attr) ->
         attr.reduce getAttr, o
     else o[attr]
 
+# Map a function over an object's values, preserving the key structure
+mapObj = (o, f) ->
+    _o = {}
+    for k, v of o
+        _o[k] = f v
+    return _o
+
 methods.at = (ctx, inp, attr..., cb) ->
     cb null, getAttr inp, attr
 
 methods.pick = listargs wrapinsync _.pick
+useUnderscoreMethods ['keys', 'values', 'pairs']
+methods.unpairs = wrapinsync _.object # Better name to avoid confusion with obj
+
+# Lists
+# ------------------------------------------------------------------------------
 
 # List generators
 
@@ -82,20 +105,26 @@ methods.range = wrapsync (i0, i1) -> [i0..i1-1]
 
 # List operations
 
+methods.reverse = wrapinsync (items) -> items.reverse()
 methods.head = wrapinsync (items, n) -> items[..n-1]
 methods.tail = wrapinsync (items, n) -> items[-1*n..]
-methods.sort = wrapinsync _.sortBy
-methods.pluck = wrapinsync _.pluck
+useUnderscoreMethods [
+    'where', 'findWhere', 'pluck',
+    'sortBy', 'groupBy', 'indexBy', 'countBy',
+    'shuffle', 'sample'
+]
 
 # HTTP
+# ------------------------------------------------------------------------------
 
 methods.get = (ctx, inp, url, cb) ->
-    $.get url, (data) -> cb null, data
+    remote 'fetcher', 'fetch', url, cb
 
 methods.post = (ctx, inp, url, cb) ->
     $.post url, inp, (data) -> cb null, data
 
 # Math
+# ------------------------------------------------------------------------------
 
 methods['*'] = times = wrapinsync (a, b) -> a * b
 methods['**'] = pow = wrapinsync (a, b) -> Math.pow a, b
@@ -110,6 +139,7 @@ methods.round = wrapinsync (a) -> Math.round a
 methods.sum = wrapinsync (a) -> a.reduce (a, b) -> a + b
 
 # Filtering
+# ------------------------------------------------------------------------------
 
 methods.filter = (ctx, inp, f, cb) ->
     console.log 'filtering by ' + inspect f.lambda
@@ -120,14 +150,32 @@ methods.filter = (ctx, inp, f, cb) ->
             _cb result # No err arg for filter
     async.filter inp, _execLambda, (result) -> cb null, result
 
+methods.filterValues = (ctx, inp, f, cb) ->
+    console.log 'filtering by ' + inspect f.lambda
+    _execSection = (_inp, _section, _cb) ->
+        execSection ctx, _inp, _section, _cb
+    _execLambda = ([k, _inp], _cb) ->
+        async.reduce f.lambda, _inp, _execSection, (err, result) ->
+            _cb [k, result] # No err arg for filter
+    async.filter _.pairs(inp), _execLambda, (result_pairs) -> cb null, _.object result_pairs
+
 # Context manipulation
+# ------------------------------------------------------------------------------
 
 methods.set = (ctx, inp, v, cb) ->
     ctx.vars[v] = inp
     cb null, inp
 
+# More underscore methods
+
+useUnderscoreMethods ['isArray', 'isObject', 'isFunction', 'isString', 'isNumber', 'isBoolean', 'isDate', 'isNull']
+
+# Etc.
+
+methods.sleep = wrapasync (n, cb) -> setTimeout cb, n
+
 # Parsing
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 parseScript = (script) ->
     parsed = parser.parse script
