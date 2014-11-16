@@ -1,7 +1,7 @@
-polar = require 'polar'
+somata_socketio = require 'somata-socketio'
 fs = require 'fs'
 
-app = polar.setup_app
+app = somata_socketio.setup_app
     port: 1111
 
 app.get '/', (req, res) ->
