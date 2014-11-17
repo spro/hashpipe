@@ -127,7 +127,11 @@ Output = React.createClass
     componentDidMount: ->
         $output = $(@refs.output.getDOMNode())
         output = @props.output
-        if _.isObject(output) or _.isNumber(output) or _.isArray(output)
+        if React.isValidElement output
+            React.render output, @refs.output.getDOMNode()
+        if _.isElement(output) or (_.isArray(output) and  _.every(output, _.isElement))
+            $output.append output
+        else if _.isObject(output) or _.isNumber(output) or _.isArray(output)
             $output.JSONView output
             $output.JSONView 'collapse', 3
         else if _.isUndefined(output)
@@ -185,6 +189,7 @@ Repl = React.createClass
 
     componentDidMount: -> @focusLastInput()
     componentDidUpdate: ->
+        console.log '[Repl.componentDidUpdate]'
         @focusLastInput()
         @scrollToBottom()
 
@@ -232,6 +237,27 @@ Repl = React.createClass
 
 React.render `<Repl />`, $('#repl')[0]
 
-$('body').on 'click', ->
-    $('.line .input').last().focus()
+Imggrid = React.createClass
+    getInitialState: ->
+        showing: null
+
+    setShowing: (i) ->
+        if i == @state.showing
+            @setState showing: null
+        else
+            @setState showing: i
+
+    render: ->
+        imgs = @props.imgs.map (i) =>
+            expand = (e) => e.preventDefault(); e.stopPropagation(); @setShowing(i)
+            c = if (@state.showing == i) then 'showing' else ''
+            @makeImg i, c, expand
+
+        `<div className="imggrid">{imgs}</div>`
+
+    makeImg: (i, c, expand) ->
+        `<div className="cell"><div className={'img ' + c} style={{backgroundImage: 'url('+i+')'}} onClick={expand} key={i} /></div>`
+
+methods.imggrid = (ctx, inp, args..., cb) ->
+    cb null, `<Imggrid imgs={inp} />`
 

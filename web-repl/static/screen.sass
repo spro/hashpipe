@@ -17,6 +17,31 @@ a
     &:hover
         text-decoration: underline
 
+img
+    max-width: 100%
+
+.imggrid .cell
+    display: inline-block
+    width: 25%
+    height: 200px
+    vertical-align: middle
+    text-align: center
+    -webkit-transition: all 0.2s
+    .img
+        width: 100%
+        height: 100%
+        background-position: center
+        background-repeat: no-repeat
+        background-size: contain
+        &.showing
+            position: fixed
+            width: 100%
+            height: 100%
+            left: 0
+            top: 0
+            right: 0
+            bottom: 0
+
 .header
     padding: 20px
 
@@ -53,6 +78,7 @@ a
         width: 30px
         text-align: right
         position: absolute
+        line-height: inherit
         left: 0
 
     .input
@@ -67,12 +93,11 @@ a
         line-height: inherit
         color: #ddd
         width: 100%
-        padding-left: 40px
+        padding: 0 40px
 
     .output, .loading
         width: 100%
-        padding-left: 40px
-        padding-top: 5px
+        padding: 5px 40px 0
         position: relative
         &:before
             content: '=>'

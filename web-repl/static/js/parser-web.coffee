@@ -174,6 +174,13 @@ useUnderscoreMethods ['isArray', 'isObject', 'isFunction', 'isString', 'isNumber
 
 methods.sleep = wrapasync (n, cb) -> setTimeout cb, n
 
+# Views
+
+methods.showimg = (ctx, inp, args..., cb) ->
+    console.log 'inp would be', inp
+    console.log 'cb would be', cb
+    cb null, $("<img src='#{ inp }' />")[0]
+
 # Parsing
 # ==============================================================================
 
