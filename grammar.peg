@@ -40,7 +40,8 @@ section =
 // Aliasing
 
 aliasing =
-    "alias =" w:word { return [{alias: w}]; }
+    "alias" space a:arg eq p:phrase
+    { return [{method: 'alias', args: [a, p]}]; }
 
 // Variables
 
@@ -91,6 +92,7 @@ pipe = space "|" space
 esc_pipe = "\\|" { return "|" }
 quot = "\""
 newline = "\\n" { return "\n" }
+eq = space "=" space
 
 space = [ \t]* "\n" [ \t]+ / [ \t]*
 Space = [ \t]* "\n" [ \t]+ / [ \t]+

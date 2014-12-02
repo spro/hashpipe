@@ -191,6 +191,10 @@ execScript = (ctx, inp, script, cb) ->
     phrases = parseScript script
     console.log '[execScript]'
     console.log '    script:  ' + inspect script
+    execPhrases ctx, inp, phrases, cb
+
+execPhrases = (ctx, inp, phrases, cb) ->
+    console.log '[execPhrases]'
     console.log '    phrases: ' + inspect phrases
     hr()
     _execPhrase = (_inp, _phrase, _cb) ->
@@ -230,9 +234,11 @@ execSection = (ctx, inp, section, cb) ->
         evalArg ctx, inp, section, cb
 
 execMethod = (ctx, inp, method, args, cb) ->
-
     if alias = ctx.aliases[method]
-        execScript ctx, inp, alias, cb
+        if _.isString alias
+            execScript ctx, inp, alias, cb
+        else
+            execPhrase ctx, inp, alias, cb
 
     else if method_fn = methods[method]
         evalArgs ctx, inp, args, (err, parsed_args) ->
@@ -250,7 +256,7 @@ evalArg = (ctx, inp, arg, cb) ->
         cb null, arg.number
     else if arg.string?
         invars = arg.string.match(/\$\w+/g) || []
-        invars = invars.map((s) -> s.slice(1))
+        invars = invars.map((s) -> s.slice(1)) # remove leading "$"
         cb null, replaceVars ctx, inp, invars, arg.string
     else if arg.var?
         cb null, ctx.vars[arg.var]
@@ -264,24 +270,20 @@ evalArg = (ctx, inp, arg, cb) ->
         cb null, arg
 
 replaceVars = (ctx, inp, vars, string) ->
-    replaced = vars.reduce ((s, v) -> s.replace '$'+v, ctx.vars[v]), string
+    replaced = string
+    # Replace special vars
     replaced = replaced.replace '$!', inp
+    # Replace named vars
+    replaceVar = (s, v) -> s.replace '$'+v, ctx.vars[v]
+    replaced = vars.reduce replaceVar, replaced
 
 # Repl
 # ------------------------------------------------------------------------------
-
-context =
-    aliases:
-        foo: 'echo test'
-        foo2: 'echo test $( foo )'
-    vars:
-        bar: 7
 
 # Export things
 
 _.extend window, {
     parser
-    context
     methods
     execScript
 }

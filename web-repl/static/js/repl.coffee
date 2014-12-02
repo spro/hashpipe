@@ -4,19 +4,34 @@ randomString = (len=8) ->
         s += Math.random().toString(36).slice(2, len-s.length+2)
     return s
 
-localStorage.history = JSON.stringify [] if !localStorage.history?
-localStorage.history_at = -1
+getLocal = (k) -> JSON.parse localStorage[k]
+setLocal = (k, v) -> localStorage[k] = JSON.stringify v
 
 getHistory = ->
-    history = JSON.parse localStorage.history
-    history_at = JSON.parse localStorage.history_at
-    [history, history_at]
+    [getLocal('history'), getLocal('history_at')]
 
 addToHistory = (input) ->
     [history, history_at] = getHistory()
     history.push(input)
-    localStorage.history = JSON.stringify history
-    localStorage.history_at = -1
+    setLocal 'history', history
+    setLocal 'history_at', -1
+
+addAlias = (alias, phrase) ->
+    aliases = getLocal 'aliases'
+    aliases[alias] = phrase
+    setLocal 'aliases', aliases
+
+# Bootstrap history and start at last item
+setLocal 'history', [] if !localStorage.history?
+setLocal 'history_at', -1
+
+# Bootstrap aliases and vars
+setLocal 'aliases', {} if !localStorage.aliases?
+setLocal 'vars', {} if !localStorage.vars?
+
+context =
+    aliases: getLocal 'aliases'
+    vars: getLocal 'vars'
 
 # Dispatcher
 # ------------------------------------------------------------------------------
@@ -128,8 +143,9 @@ Output = React.createClass
         $output = $(@refs.output.getDOMNode())
         output = @props.output
         if React.isValidElement output
+            console.log '[Output.mount] react element: ', output
             React.render output, @refs.output.getDOMNode()
-        if _.isElement(output) or (_.isArray(output) and  _.every(output, _.isElement))
+        else if _.isElement(output) or (_.isArray(output) and  _.every(output, _.isElement))
             $output.append output
         else if _.isObject(output) or _.isNumber(output) or _.isArray(output)
             $output.JSONView output
@@ -156,8 +172,6 @@ Loading = React.createClass
 Line = React.createClass
 
     addInput: (input) ->
-        console.log 'my id is ' , @props.line.id
-        console.log 'the input is', input
         Dispatcher.addInput @props.line.id, input
 
     render: ->
@@ -260,4 +274,26 @@ Imggrid = React.createClass
 
 methods.imggrid = (ctx, inp, args..., cb) ->
     cb null, `<Imggrid imgs={inp} />`
+
+methods.clickable = (ctx, inp, args..., cb) ->
+    href = inp || args[0]
+    cb null, `<a href={href}>{href}</a>`
+
+methods.el = (ctx, inp, args..., cb) ->
+    cb null, React.createElement args[0], null, inp
+
+methods.html = (ctx, inp, args..., cb) ->
+    cb null, `<div dangerouslySetInnerHTML={{__html: inp}}></div>`
+
+methods.alias = (ctx, inp, args..., cb) ->
+    [a, p] = args
+    ctx.aliases[a] = p
+    addAlias a, p
+    cb null, 'aliased ' + a
+
+methods.local = (ctx, inp, args..., cb) ->
+    cb null, getLocal args[0]
+
+methods.aliases = (ctx, inp, args..., cb) ->
+    cb null, _.keys getLocal 'aliases'
 
