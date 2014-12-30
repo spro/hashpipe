@@ -1,18 +1,12 @@
 # hashpipe
 
-hashpipe is an experimental shell with first-class objects and alternative piping constructs.
+Hashpipe is an experimental JSON-based shell. As if Bash were designed for manipulating web APIs instead of a filesystem.
 
 At a glance:
 
-* IO with "slightly-typed" data
-    * Numbers, strings, booleans
-    * Objects, arrays
-* Alternative pipeline constructs
-    * Parallel `||` & series `|=` map
-    * Conditional branching(?)
-* Modular design
-    * Commands are just functions
-    * `use` modules to load commands
+* JSON-based IO
+* Alternative piping constructs (such as the parallel pipe `||`)
+* Modular design (including `use`ing modules and `alias`ing commands)
 
 ---
 
