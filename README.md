@@ -4,9 +4,9 @@ Hashpipe is an experimental JSON-based shell. As if Bash were designed for manip
 
 At a glance:
 
-* JSON-based IO
-* Alternative piping constructs (such as the parallel pipe `||`)
-* Modular design (including `use`ing modules and `alias`ing commands)
+* JSON-based IO (literals, objects, arrays)
+* Alternative piping constructs (parallel pipe `||`, series pipe `|=`)
+* Modular design (`use`ing modules, `alias`ing commands)
 
 ---
 
