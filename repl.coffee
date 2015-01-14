@@ -154,19 +154,24 @@ else
         repl.plain = true
 
     if script_filename = argv.run || argv.r
-        # Try reading in piped
-        piped = ''
-        process.stdin.on 'data', (data) ->
-            piped += data.toString()
-        process.stdin.on 'end', ->
-            repl.last_out = piped.trim()
-
+        doRunScript = ->
             # Execute single script
             script = fs.readFileSync(script_filename).toString()
             setTimeout ->
                 repl.executeScript script, ->
                     process.exit()
             , 50
+
+        if !process.stdin.isTTY
+            # Try reading in piped
+            piped = ''
+            process.stdin.on 'data', (data) ->
+                piped += data.toString()
+            process.stdin.on 'end', ->
+                repl.last_out = piped.trim()
+                doRunScript()
+        else
+            doRunScript()
 
     else if script_filename = argv.load || argv.l
         # Execute single script
