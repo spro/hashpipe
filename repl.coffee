@@ -36,7 +36,7 @@ PipelineREPL = (@pipeline) ->
 
 defaultPipeline = ->
     new Pipeline()
-        .use(require('./modules/mongo').connect())
+        #.use(require('./modules/mongo').connect())
         .use(require('./modules/redis').connect())
         .use('http')
         .use('html')
@@ -44,7 +44,10 @@ defaultPipeline = ->
         .use('keywords')
 
 PipelineREPL::writeSuccess = (data) ->
-    console.log prettyPrint data
+    if @plain
+        console.log data
+    else
+        console.log prettyPrint data
 
 PipelineREPL::writeError = (err) ->
     ansi.fg['red']()
@@ -106,7 +109,11 @@ PipelineREPL::startReadline = ->
         script = 'id' if !script.length
         repl.executeScript script, ->
             if run_once
-                process.exit()
+                if script_exec = argv.exec || argv.e
+                    repl.executeScript script_exec, ->
+                        process.exit()
+                else
+                    process.exit()
             else
                 rl.prompt()
 
@@ -143,13 +150,23 @@ else
     # Stand-alone mode
     repl = new PipelineREPL
 
+    if argv.plain || argv.p
+        repl.plain = true
+
     if script_filename = argv.run || argv.r
-        # Execute single script
-        script = fs.readFileSync(script_filename).toString()
-        setTimeout ->
-            repl.executeScript script, ->
-                process.exit()
-        , 50
+        # Try reading in piped
+        piped = ''
+        process.stdin.on 'data', (data) ->
+            piped += data.toString()
+        process.stdin.on 'end', ->
+            repl.last_out = piped.trim()
+
+            # Execute single script
+            script = fs.readFileSync(script_filename).toString()
+            setTimeout ->
+                repl.executeScript script, ->
+                    process.exit()
+            , 50
 
     else if script_filename = argv.load || argv.l
         # Execute single script
