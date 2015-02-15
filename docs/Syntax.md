@@ -12,7 +12,7 @@
 
 As in bash, a command is followed by space-separated arguments; arguments may
 be bare words (interpreted as strings), [literal values](#literals), [arrays,
-objects](#arrays-and-objects), or [sub-pipes](#sub-pipes).
+objects](#arrays-and-objects), [variables](#variables) or [sub-pipes](#sub-pipes).
 
 ```coffee
 # echo test
@@ -27,7 +27,7 @@ objects](#arrays-and-objects), or [sub-pipes](#sub-pipes).
 
 ## Literals
 
-Hashpipe supports a few basic types as literals: Numbers, strings and booleans.
+Hashpipe supports a few basic types as literals: numbers, strings and booleans.
 They may be used as command arguments or alone (using them alone is actually a
 shortcut for the `val` command).
 
@@ -75,9 +75,12 @@ JSON-esque syntax:
 { first: 'Freddy', last: 'Todd' }
 ```
 
-When using the JSON-esque syntaxes, values may be commands themselves:
+When using the JSON-esque syntaxes, values are interpreted as commands themselves:
 
 ```coffee
+# [echo one, echo two, echo eleven]
+[ 'one', 'two', 'eleven' ]
+
 # {a: list 1 2}
 { a: [ 1, 2 ] }
 
