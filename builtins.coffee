@@ -50,6 +50,8 @@ builtins.id = (inp, args, ctx, cb) -> cb null, inp
 # echo val -> "val"
 builtins.val = (inp, args, ctx, cb) -> cb null, args[0]
 
+builtins.or = (inp, args, ctx, cb) -> cb null, inp or args[0]
+
 # `echo` returns its arguments joined as a string
 # echo val -> "val"
 builtins.echo = (inp, args, ctx, cb) ->
@@ -66,6 +68,8 @@ builtins.num = (inp, args, ctx, cb) -> cb null, num inp
 # `bool` coerces input into a boolean
 # val -> bool -> val?
 builtins.bool = (inp, args, ctx, cb) -> cb null, bool inp
+
+builtins.null = (inp, args, ctx, cb) -> cb null, null
 
 # `if [test] [value]`
 # Returns the value if the test is true, otherwise nothing
