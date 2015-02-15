@@ -1,12 +1,12 @@
 # Hashpipe syntax crash course
 
-* [Commands](#Commands)
-* [Literals](#Literals)
-* [Arrays and objects](#Arrays and objects)
-* [Pipelines](#Pipelines)
-* [Variables](#Variables)
-* [Sub-pipes](#Sub-pipes)
-* [`@`-expressions](#`@`-expressions)
+* [Commands](#commands)
+* [Literals](#literals)
+* [Arrays and objects](#arrays-and-objects)
+* [Pipelines](#pipelines)
+* [Variables](#variables)
+* [Sub-pipes](#sub-pipes)
+* [At-expressions](#at-expressions)
 
 ## Commands
 
@@ -152,11 +152,9 @@ Sub-pipes are passed the same input as the outer command.
 [ '2 / 2', '4 / 2', '6 / 2' ]
 ```
 
-## `@`-expressions
+## At-expressions
 
-An `@`-expression is a special command suffix used to traverse and transform
-objects, resulting in new objects or values. They may occur at the end of any
-command. 
+An `@`-expression is a special suffix used to traverse and transform objects and arrays. They may occur at the end of any command. 
 
 ### Getting with `.accessor`
 
@@ -282,4 +280,3 @@ accessors to act on.
 [ { name: 'Barky', human_years: 35 },
   { name: 'Woofer', human_years: 42 } ]
 ```
-
