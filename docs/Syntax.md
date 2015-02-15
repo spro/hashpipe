@@ -3,8 +3,8 @@
 * [Commands](#commands)
 * [Literals](#literals)
 * [Arrays and objects](#arrays-and-objects)
-* [Pipelines](#pipelines)
 * [Variables](#variables)
+* [Pipelines](#pipelines)
 * [Sub-pipes](#sub-pipes)
 * [At-expressions](#at-expressions)
 
@@ -85,31 +85,6 @@ When using the JSON-esque syntaxes, values may be commands themselves:
 [ { a: 1 }, { b: 2 }, { d: 3 }, [ 4, 5, 6 ] ]
 ```
 
-## Pipelines
-
-A command's output may be piped to another to be used as input with the `|`
-operator.
-
-```coffee
-# echo one two three
-'one two three'
-
-# echo one two three | split ' '
-[ 'one', 'two', 'three' ]
-```
-
-Hashpipe also has special pipe operators that act over lists; the parallel `||`
-and series `|=` pipes. Both map each item of the list through a single command
-and return a new list of each result.
-
-```coffee
-# list 1 2 3 || + 5
-[ 6, 7, 8 ]
-
-# list Tom Fred George || echo Sir $!
-[ 'Sir Tom', 'Sir Fred', 'Sir George' ]
-```
-
 ## Variables
 
 Variables are set with the `set` command. The `set` command takes one or two arguments - the first argument is always the variable name. If a second argument is supplied it will be used as the value to set; otherwise any piped input will be used.
@@ -143,6 +118,31 @@ The special variable `$!` references the output of the last command.
 
 # list a b c | length | echo There were $! letters in there.
 'There were 3 letters in there.'
+```
+
+## Pipelines
+
+A command's output may be piped to another to be used as input with the `|`
+operator.
+
+```coffee
+# echo one two three
+'one two three'
+
+# echo one two three | split ' '
+[ 'one', 'two', 'three' ]
+```
+
+Hashpipe also has special pipe operators that act over lists; the parallel `||`
+and series `|=` pipes. Both map each item of the list through a single command
+and return a new list of each result.
+
+```coffee
+# list 1 2 3 || + 5
+[ 6, 7, 8 ]
+
+# list Tom Fred George || echo Sir $!
+[ 'Sir Tom', 'Sir Fred', 'Sir George' ]
 ```
 
 ## Sub-pipes
