@@ -98,7 +98,7 @@ operator.
 [ 'one', 'two', 'three' ]
 ```
 
-hashpipe also has special pipe operators that act over lists; the parallel `||`
+Hashpipe also has special pipe operators that act over lists; the parallel `||`
 and series `|=` pipes. Both map each item of the list through a single command
 and return a new list of each result.
 
@@ -112,22 +112,35 @@ and return a new list of each result.
 
 ## Variables
 
-Variables are designated with `$` both when setting and getting.
+Variables are set with the `set` command. The `set` command takes one or two arguments - the first argument is always the variable name. If a second argument is supplied it will be used as the value to set; otherwise any piped input will be used.
 
 ```coffee
-# $day = 'Wednesday'
+# set today 'Wednesday'
 'Wednesday'
 
-# echo I just realized today is $day.
+# echo Tuesday | set yesterday
+'Tuesday'
+```
+
+Variables are used with the `$var` syntax in command arguments. String arguments will be replaced with the value of the named variable (unless escaped, as in `\$bar`)
+
+```coffee
+# echo I just realized today is $today.
 'I just realized today is Wednesday.'
 
-# list Tuesday $day tomorrow
-[ 'Tuesday', 'Wednesday', 'tomorrow' ]
+# echo Going up, on a $yesterday
+'Going up, on a Tuesday'
+
+# list $yesterday $today \$tomorrow
+[ 'Tuesday', 'Wednesday', '$tomorrow' ]
 ```
 
 The special variable `$!` references the output of the last command.
 
 ```coffee
+# [1, 2, 3] | join ', ' | echo Easy as $!
+'Easy as 1, 2, 3'
+
 # list a b c | length | echo There were $! letters in there.
 'There were 3 letters in there.'
 ```
