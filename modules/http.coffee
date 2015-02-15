@@ -33,23 +33,25 @@ parseResponseAll = (cb) ->
 
 # Abstract http method using given response parser
 
+# METHOD url {query} {auth, headers}
+
 httpMethod = (method, responseParser=parseResponseData) ->
     (inp, args, ctx, cb) ->
-        extra_headers = args[1] || {}
+        {headers, auth} = args[2] || {}
         request_options =
             url: args[0]
             method: method
             json: !inp? || (typeof inp == 'object')
             body: inp if method != 'GET'
-            #qs: inp if method == 'GET'
+            qs: args[1] if method == 'GET'
             headers: _.extend
                 'user-agent': 'Hashpipe HTTP Module'
-            , extra_headers
+            , headers
         req = request request_options, responseParser cb
         # The multipart way
         # req_data = req.form()
         # req_data.append k, v for k, v of inp
-        if auth = args[2]
+        if auth
             req.auth auth.username, auth.password
 
 # get "url" -> {data} / "html"
