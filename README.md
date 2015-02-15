@@ -40,14 +40,14 @@ Bash-like command pipelines
 [ 'JOHN', 'JACOB', 'JINGLEHEIMER' ]
 ```
 
-Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md#at-expressions) for nagivating JSON objects and arrays
+Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md#at-expressions) for traversing JSON objects and arrays
 
 ```coffee
+# ['a', 'b', 'c'] @ 0
+'a'
+
 # {name: "George", age: 55} @ name
 'George'
-
-# ['elephant', 'hyena', 'giraffe'] @ 0
-'elephant'
 
 # [{name: "Fred"}, {name: "Jerry"}, {name: "Tim"}] @ :name
 [ 'Fred', 'Jerry', 'Tim' ]
