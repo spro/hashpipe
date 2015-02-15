@@ -1,14 +1,21 @@
 # hashpipe
 
-Hashpipe is an experimental JSON-based shell. As if Bash were designed for manipulating web APIs instead of a filesystem.
+Hashpipe is an experimental JSON-based shell. Imagine that Bash was designed for manipulating web APIs instead of a filesystem.
 
-At a glance:
+Featuring:
 
-* JSON-based IO (literals, objects, arrays)
-* Alternative piping constructs (parallel pipe `||`, series pipe `|=`)
-* Modular design (`use`ing modules, `alias`ing commands)
+* JSON-typed input & output (strings, numbers, objects, and arrays)
+* Alternative piping constructs (like the parallel pipe `||` and sequential pipe `|=`)
+* Modular design (`use`ing modules and `alias`ing commands)
 
----
+## Getting started
+
+```bash
+$ npm install -g hashpipe
+$ hashpipe
+# echo testing
+'testing'
+```
 
 ## Syntax crash course
 
