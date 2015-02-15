@@ -155,25 +155,22 @@ runPipeline = (_cmd_tokens, inp, ctx, final_cb) ->
                     return parseArgs inp, arg.quoted, (err, qargs) ->
                         _cb null, qargs.join(' ')
             else if _.isString(arg)
-                if arg == '$!'
-                    arg = inp
                 # Int replacement
-                else if $key = arg.match /^-?[0-9]+$/
+                if $key = arg.match /^-?[0-9]+$/
                     arg = parseInt arg
-                # Full replacement
-                else if $key = arg.match /^\$[a-zA-Z0-9_-]+$/
-                    $key = $key[0]
-                    key = $key.slice(1)
-                    arg = ctx.get 'vars', key
                 # Non replacement (escaped)
                 else if $key = arg.match /\\\$[a-zA-Z0-9_-]*$/
                     arg = $key[0].slice(1)
                 # Within string replacement
                 else
-                    while $key = arg.match /\$[a-zA-Z0-9_-]+/
+                    while $key = arg.match /\$[!a-zA-Z0-9_-]+/
                         $key = $key[0]
-                        key = $key.slice(1)
-                        arg = arg.replace $key, ctx.get 'vars', key
+                        if $key == '$!'
+                            val = inp
+                        else
+                            key = $key.slice(1)
+                            val = ctx.get 'vars', key
+                        arg = arg.replace $key, val
             _cb null, arg
 
         async.map args, replaceArg, (err, new_args) ->
