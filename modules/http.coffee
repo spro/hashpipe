@@ -1,6 +1,7 @@
 # HTTP Requests
 
 request = require('request').defaults({ encoding: null })
+url = require 'url'
 _ = require 'underscore'
 
 # Response parsers
@@ -35,11 +36,17 @@ parseResponseAll = (cb) ->
 
 # METHOD url {query} {auth, headers}
 
+fixUrl = (u) ->
+    if !url.parse(u).protocol?
+        'http://' + u
+    else
+        url
+
 httpMethod = (method, responseParser=parseResponseData) ->
     (inp, args, ctx, cb) ->
         {headers, auth} = args[2] || {}
         request_options =
-            url: args[0]
+            url: fixUrl args[0]
             method: method
             json: !inp? || (typeof inp == 'object')
             body: inp if method != 'GET'
