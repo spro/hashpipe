@@ -10,11 +10,72 @@ Featuring:
 
 ## Getting started
 
+
+### Installation
+
 ```bash
 $ npm install -g hashpipe
 $ hashpipe
-# echo testing
-'testing'
+```
+
+### Basic usage
+
+Bash-like command pipelines
+
+```
+# cat names.txt | split '\n' | match John | sort
+[ 'John Adams',
+  'John King',
+  'John Lee',
+  'John Mitchell' ]
+```
+
+Parallel pipe to map commands over arrays
+
+```
+# [1, 3, 4, 12] || * 5
+[ 5, 15, 20, 60 ]
+
+#  echo John Jacob Jingleheimer | split ' ' || upper
+[ 'JOHN', 'JACOB', 'JINGLEHEIMER' ]
+```
+
+Special `@` syntax for nagivating JSON objects and arrays
+
+```
+# {name: "George", age: 55} @ name
+'George'
+
+# [1, 2, 3] @ 0
+1
+
+# [{name: "Fred"}, {name: "Jerry"}, {name: "Tim"}] @ 2.name
+'Tim'
+```
+
+Ideal for interacting with JSON APIs
+
+```
+# {encoded: 'SGV5IHRoZXJl'} | post http://spro.webscript.io/base64
+{ decoded: 'Hey there' }
+
+# get http://reddit.com/r/worldnews.json @ data.children:data:{title, score} | sort -score
+[ { title: 'Shooting at Danish blasphemy seminar',
+    score: 4864 },
+  { title: 'Protests across Pakistan to denounce Taliban.',
+    score: 4851 },
+  { title: '‘Anonymous’ hacking group shuts down over 800 Islamic State Twitter accounts',
+    score: 3306 },
+  ... ]
+  
+# get http://api.statdns.com/google.com/a @ answer.0.rdata | set ip | get http://freegeoip.net/json/$ip
+{ ip: '173.194.65.101',
+  country_name: 'United States',
+  region_name: 'California',
+  city: 'Mountain View',
+  zip_code: '94043',
+  latitude: 37.419,
+  longitude: -122.058 }
 ```
 
 ## Syntax crash course
