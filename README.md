@@ -13,7 +13,7 @@ Featuring:
 
 ### Installation
 
-```bash
+```coffee
 $ npm install -g hashpipe
 $ hashpipe
 ```
@@ -22,7 +22,7 @@ $ hashpipe
 
 Bash-like command pipelines
 
-```
+```coffee
 # cat names.txt | split '\n' | match John | sort
 [ 'John Adams',
   'John King',
@@ -32,7 +32,7 @@ Bash-like command pipelines
 
 Parallel pipe to map commands over arrays
 
-```
+```coffee
 # [1, 3, 4, 12] || * 5
 [ 5, 15, 20, 60 ]
 
@@ -42,7 +42,7 @@ Parallel pipe to map commands over arrays
 
 Special `@` syntax for nagivating JSON objects and arrays
 
-```
+```coffee
 # {name: "George", age: 55} @ name
 'George'
 
@@ -55,7 +55,7 @@ Special `@` syntax for nagivating JSON objects and arrays
 
 Ideal for interacting with JSON APIs
 
-```
+```coffee
 # {encoded: 'SGV5IHRoZXJl'} | post http://spro.webscript.io/base64
 { decoded: 'Hey there' }
 
@@ -86,7 +86,7 @@ As in bash, a command is followed by space-separated arguments; arguments may
 be bare words (interpreted as strings), [literal values](#literals), [arrays,
 objects](#arrays-and-objects), or [sub-pipes](#sub-pipes).
 
-```
+```coffee
 # echo test
 'test'
 
@@ -103,7 +103,7 @@ Hashpipe supports a few basic types as literals: Numbers, strings and booleans.
 They may be used as command arguments or alone (using them alone is actually a
 shortcut for the `val` command).
 
-```
+```coffee
 # 4.20
 4.2
 
@@ -128,7 +128,7 @@ other places the quotes are required.
 There are two ways to express a list; using the `list [value]...` command or
 with a JSON-esque syntax:
 
-```
+```coffee
 # list 1 2 3
 [ 1, 2, 3 ]
 
@@ -139,7 +139,7 @@ with a JSON-esque syntax:
 Objects may be defined either with the `obj [key] [value]...` command or
 JSON-esque syntax:
 
-```
+```coffee
 # obj first Freddy last Todd
 { first: 'Freddy', last: 'Todd' }
 
@@ -149,7 +149,7 @@ JSON-esque syntax:
 
 When using the JSON-esque syntaxes, values may be commands themselves:
 
-```
+```coffee
 # {a: list 1 2}
 { a: [ 1, 2 ] }
 
@@ -162,7 +162,7 @@ When using the JSON-esque syntaxes, values may be commands themselves:
 A command's output may be piped to another to be used as input with the `|`
 operator.
 
-```
+```coffee
 # echo one two three
 'one two three'
 
@@ -174,7 +174,7 @@ hashpipe also has special pipe operators that act over lists; the parallel `||`
 and series `|=` pipes. Both map each item of the list through a single command
 and return a new list of each result.
 
-```
+```coffee
 # list 1 2 3 || + 5
 [ 6, 7, 8 ]
 
@@ -186,7 +186,7 @@ and return a new list of each result.
 
 Variables are designated with `$` both when setting and getting.
 
-```
+```coffee
 # $day = 'Wednesday'
 'Wednesday'
 
@@ -199,7 +199,7 @@ Variables are designated with `$` both when setting and getting.
 
 The special variable `$!` references the output of the last command.
 
-```
+```coffee
 # list a b c | length | echo There were $! letters in there.
 'There were 3 letters in there.'
 ```
@@ -209,7 +209,7 @@ The special variable `$!` references the output of the last command.
 Create a sub-pipe with `$( command... )`. The sub-pipe is executed and
 substituted with its result in the outer command's argument list.
 
-```
+```coffee
 # list $(4 | + 4) $(5 | - 5) $(6 | + 2)
 [ 8, 0, 8 ]
 
@@ -219,7 +219,7 @@ substituted with its result in the outer command's argument list.
 
 Sub-pipes are passed the same input as the outer command.
 
-```
+```coffee
 # list 1 2 3 || echo $( * 2 ) "/ 2"
 [ '2 / 2', '4 / 2', '6 / 2' ]
 ```
@@ -237,7 +237,7 @@ items of an array, with the `.` or *get* operator. It is similar to the `.`
 syntax for javascript objects, except that it applies to both object keys and
 array indices.
 
-```
+```coffee
 # {name: "Fred", age: 42} @ .name
 'Fred'
 
@@ -247,14 +247,14 @@ array indices.
 
 We can chain attributes with `.` to descend further into an object:
 
-```
+```coffee
 # [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ .1.name
 'Paul'
 ```
 
 For simplicity, the leading `.` is implied.
 
-```
+```coffee
 # {name: "Fred", age: 42} @ name
 'Fred'
 ```
@@ -265,7 +265,7 @@ To access one key of an array of objects, we can use the `:` or *map* operator.
 The map operator applies an accessor to each item of an array, and returns a
 new array with the results.
 
-```
+```coffee
 # [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name
 [ 'Fred', 'Paul', 'Sam' ]
 ```
@@ -273,7 +273,7 @@ new array with the results.
 Map also works for array indices. The *get* and *map* operators can be chained
 freely:
 
-```
+```coffee
 # [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name:0
 [ 'F', 'P', 'S' ]
 
@@ -286,14 +286,14 @@ freely:
 With the multi-get syntax, several attributes can be plucked off a single
 object to form an array.
 
-```
+```coffee
 # {name: "Fred", happy: true, kind: 'dog'} @ [name, happy]
 [ 'Fred', true ]
 ```
 
 Each member of a multi-get is a full expression, so accessors may be chained:
 
-```
+```coffee
 # {name: "Sam", pets: [{name: 'Woofer'}, {name: 'Barky'}]} @ [name, pets:name]
 [ 'Sam', [ 'Woofer', 'Barky' ] ]
 ```
@@ -304,7 +304,7 @@ Similar to the array-based multi-get, you can use the object-based multi-get to
 return an object of named values. If an accessor expression is not specified,
 the key name is used instead.
 
-```
+```coffee
 # $fred = {name: 'Fred', age: 42, happy: true}
 
 # $fred @ {n: name, h: happy}
@@ -316,7 +316,7 @@ the key name is used instead.
 
 Again, each member is a full expression, allowing for chaining and nesting.
 
-```
+```coffee
 # $fred @ [name, {age, happy}]
 [ 'Fred', { age: 42, happy: true } ]
 
@@ -327,7 +327,7 @@ Again, each member is a full expression, allowing for chaining and nesting.
 **Note:** the special `.` expression may be used within a multi-get to return
 the full input.
 
-```
+```coffee
 # $fred @ {name, self: .}
 { name: 'Fred',          
   self: { name: 'Fred', age: 42, happy: true } } 
@@ -342,7 +342,7 @@ useful in a multi-get array or object.
 `@`-expression. Further `@`-expressions may be used within sub-pipes to specify
 accessors to act on.
 
-```
+```coffee
 # {name: "Woofer", dog_years: 6} @ {name, human_years: $(@ dog_years | * 7)}
 { name: 'Woofer', human_years: 42 }
 
