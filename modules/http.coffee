@@ -40,7 +40,7 @@ fixUrl = (u) ->
     if !url.parse(u).protocol?
         'http://' + u
     else
-        url
+        u
 
 httpMethod = (method, responseParser=parseResponseData) ->
     (inp, args, ctx, cb) ->
