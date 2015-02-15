@@ -43,7 +43,7 @@ httpMethod = (method, responseParser=parseResponseData) ->
             body: inp if method != 'GET'
             #qs: inp if method == 'GET'
             headers: _.extend
-                'user-agent': 'Qnectar Pipeline HTTP Module'
+                'user-agent': 'Hashpipe HTTP Module'
             , extra_headers
         req = request request_options, responseParser cb
         # The multipart way

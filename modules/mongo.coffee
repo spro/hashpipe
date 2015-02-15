@@ -13,7 +13,7 @@ exports.connect = (config) ->
 
     locals.db = null
     new mongodb.Db(
-        config?.db || 'qnectar',
+        config?.db || 'hashpipe',
         mongodb.Server(config?.host || 'localhost', 27017),
         safe: true
     ).open (err, db) -> locals.db = db

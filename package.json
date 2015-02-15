@@ -2,10 +2,10 @@
     "name": "hashpipe",
     "version": "0.0.6",
     "description": "Object oriented shell experiment",
-    "homepage": "http://github.com/qnectar/hashpipe",
+    "homepage": "http://github.com/spro/hashpipe",
     "repository": {
         "type": "git",
-        "url": "http://github.com/qnectar/hashpipe.git"
+        "url": "http://github.com/spro/hashpipe.git"
     },
     "author": {
         "name": "Sean Robertson",
