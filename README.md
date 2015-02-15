@@ -66,3 +66,9 @@ Designed for easy interaction with JSON APIs
 #| {encoded: 'SGV5IHRoZXJl'} | post http://spro.webscript.io/base64
 { decoded: 'Hey there' }
 ```
+
+## Learning more
+
+Try one of the Hashpipe walkthroughs to see it in action:
+
+* [What's the weather like at Google?](https://github.com/spro/hashpipe/blob/master/docs/walkthroughs/GoogleWeather.md)
