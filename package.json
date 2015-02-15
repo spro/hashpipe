@@ -1,6 +1,6 @@
 {
     "name": "hashpipe",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Object oriented shell experiment",
     "homepage": "http://github.com/qnectar/hashpipe",
     "repository": {
@@ -14,6 +14,9 @@
     "keywords": [
     ],
     "main": "lib/index.js",
+    "bin": {
+        "hashpipe": "./repl.coffee"
+    },
     "dependencies": {
         "ansi": "0.3.x",
         "async": "0.9.x",
