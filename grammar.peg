@@ -160,16 +160,18 @@ setting =
     { return [{cmd: ['set', set.slice(1)]}]; }
 
 kv =
-    k:valid_key col v:start_cmd { return {key: k, val: v}; }
+    k:valid_key col v:pipeline { return {key: k, val: v}; }
 
-obj_cmd = "{" space head:kv tail:(comma kv)* space "}"
+obj_cmd = 
+    "{" space "}" { return ['obj']; }
+    / "{" space head:kv tail:(comma kv)* space "}"
     {
         var kvs = [head].concat(tail.map(function(t) { return t[1]; }));
         var obj_cmd = ['obj'];
         for (var i in kvs) {
             var kv = kvs[i];
             obj_cmd.push(kv.key);
-            obj_cmd.push({sub:[[kv.val]]});
+            obj_cmd.push({sub:[kv.val]});
         }
         return obj_cmd;
     }
