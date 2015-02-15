@@ -90,4 +90,7 @@ As an alias:
 
 #| server-temp news.ycombinator.com
 51.50
+
+#| server-temp alaskausa.org
+22.07
 ```
