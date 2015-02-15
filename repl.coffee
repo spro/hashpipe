@@ -37,7 +37,7 @@ PipelineREPL = (@pipeline) ->
 defaultPipeline = ->
     new Pipeline()
         #.use(require('./modules/mongo').connect())
-        .use(require('./modules/redis').connect())
+        #.use(require('./modules/redis').connect())
         .use('http')
         .use('html')
         .use('files')
