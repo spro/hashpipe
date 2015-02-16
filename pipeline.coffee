@@ -290,6 +290,8 @@ mapInto = (l, f, d, cb) ->
 # Take an object and an expression and follow the expression
 # tree down to the desired result
 descendObj = (_obj, _expr, ctx, final_cb) ->
+    if !_obj?
+        return final_cb null, undefined
 
     # This is me hoping Node has really good GC
     obj = _.clone _obj
