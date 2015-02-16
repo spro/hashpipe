@@ -142,8 +142,6 @@ builtins.tail = (inp, args, ctx, cb) ->
         cb null, inp[inp.length-count..]
 builtins.join = (inp, args, ctx, cb) -> cb null, inp.join args[0] || ' '
 builtins.split = (inp, args, ctx, cb) -> cb null, inp.split(args[0] || '\n')
-builtins.uniq = (inp, args, ctx, cb) -> cb null, _.uniq inp
-builtins.flatten = (inp, args, ctx, cb) -> cb null, _.flatten inp
 
 builtins.trim = (inp, args, ctx, cb) -> cb null, (args[0] || inp).trim()
 
@@ -292,9 +290,9 @@ randint = (max=100) ->
 builtins.randstr = (inp, args, ctx, cb) -> cb null, randstr args[0]
 builtins.randint = (inp, args, ctx, cb) -> cb null, randint args[0]
 
-builtins.randomChoice = (inp, args, ctx, cb) ->
+builtins.choice = (inp, args, ctx, cb) ->
     cb null, _.sample(inp, 1)[0]
-builtins.randomSample = (inp, args, ctx, cb) ->
+builtins.sample = (inp, args, ctx, cb) ->
     cb null, _.sample inp, args[0] || inp.length/2
 
 # Array functions
@@ -320,7 +318,8 @@ umethods = _.pick(_, [
     'pick', 'omit', 'extend', 'defaults',
     'where', 'findWhere',
     'sortBy', 'groupBy', 'indexBy', 'countBy',
-    'shuffle'
+    'shuffle', 'uniq', 'flatten',
+    'without', 'union', 'intersection', 'difference'
 ])
 # Wrap them using `sync` and `with_inp` options
 _.extend builtins, helpers.wrapall umethods, '', true, true
