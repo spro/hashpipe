@@ -1,7 +1,10 @@
 all: build test
 
 build:
-	pegjs grammar.peg parser.js
+	# Compile .coffee to .js
+	coffee -o lib -c .
+	#pegjs grammar.peg parser.js
+	cp parser.js lib/
 
 test:
 	coffee tests/sub_command.coffee
