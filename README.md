@@ -57,11 +57,11 @@ Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md
 Designed for easy interaction with JSON APIs
 
 ```coffee
-#| get http://freegeoip.net/json
-{ country_name: 'United States',
-  region_name: 'California',
+#| get http://www.telize.com/geoip
+{ country: 'United States',
+  region: 'California',
   city: 'Mountain View',
-  zip_code: '94043' }
+  postal_code: '94043' }
 
 #| {encoded: 'SGV5IHRoZXJl'} | post http://spro.webscript.io/base64
 { decoded: 'Hey there' }
@@ -72,3 +72,4 @@ Designed for easy interaction with JSON APIs
 Try one of the Hashpipe walkthroughs to see it in action:
 
 * [What's the weather like at Google?](https://github.com/spro/hashpipe/blob/master/docs/walkthroughs/GoogleWeather.md)
+* [Exploring Hacker News with Hashpipe](https://github.com/spro/hashpipe/blob/master/docs/walkthroughs/HN.md)

@@ -32,15 +32,15 @@ Now let's grab the first IP result and save it:
 
 Again using the last command's output, we use an `@`-expression to get the first IP from the array and `set` it as `$ip`.
 
-So we have an IP address, but weather tends to be based on physical location. Luckily freegeoip.net has a handy JSON API for geolocating IP addresses. Let's try that.
+So we have an IP address, but weather tends to be based on physical location. Luckily telize.com has a handy JSON API for geolocating IP addresses. Let's try that.
 
 ```coffee
-#| get freegeoip.net/json/$ip | set where
+#| get telize.com/geoip/$ip | set where
 { ip: '74.125.224.7',
-  country_name: 'United States',
-  region_name: 'California',
+  country: 'United States',
+  region: 'California',
   city: 'Mountain View',
-  zip_code: '94043',
+  postal_code: '94043',
   latitude: 37.419,
   longitude: -122.058 }
 ```
