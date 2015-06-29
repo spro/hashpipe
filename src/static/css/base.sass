@@ -1,0 +1,69 @@
+$globals
+    dark: #222
+    med: #bbb
+    light: #eff
+    green: #ae9
+    blue: #3ae
+    yellow: #fd8
+    pink: #fa9
+    
+*
+    margin: 0
+    padding: 0
+    box-sizing: border-box
+
+body
+    font: 13px/20px Inconsolata, Monaco, Courier, monospace
+    background: $dark
+    color: $light
+    padding: 15px 0
+
+a
+    text-decoration: none
+    &:hover
+        text-decoration: underline
+
+pre
+    font: inherit
+
+.command, .response, #input
+    padding: 15px 60px
+    position: relative
+
+pre.command
+    font-weight: bold
+
+pre a
+    color: $blue
+
+pre .string
+    color: $med
+
+pre .bool
+    color: $pink
+
+.prompt
+    position: absolute
+    left: 30px
+    top: 16px
+    color: #666
+
+#input
+    padding: 15px 0
+
+#input input
+    padding: 4px 60px
+    font: inherit
+    color: inherit
+    background: none
+    border: none
+    outline: none
+    -webkit-appearance: none
+    display: block
+    width: 100%
+
+    &:focus
+        background: #333
+
+#input .prompt
+    top: 18px

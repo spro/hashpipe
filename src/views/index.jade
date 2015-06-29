@@ -1,0 +1,23 @@
+title hashpipe
+link(rel='stylesheet', href='/css/base.css')
+
+.commands
+
+    pre.command
+        .prompt #|
+        | get hashpipe.io/about.json
+
+    pre.response
+        | {
+        |     description: <span class='string'>"A command line for working with web APIs"</span>,
+        |     repo: <a href='http://github.com/spro/hashpipe' target='_blank'>http://github.com/spro/hashpipe</a>,
+        |     author: <a href='http://sprobertson.com/' target='_blank'>spro</a>,
+        |     wip: <span class='bool'>true</span>
+        | }
+
+    #input
+        .prompt #| 
+        input
+
+
+script(src='/js/base.js')
