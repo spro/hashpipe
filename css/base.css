@@ -1,0 +1,80 @@
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font: 13px/20px Inconsolata, Monaco, Courier, monospace;
+  background: #222;
+  color: #eff;
+  padding: 15px 0;
+}
+
+a {
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+pre {
+  font: inherit;
+}
+
+.command,
+.response,
+#input {
+  padding: 15px 60px;
+  position: relative;
+}
+
+pre.command {
+  font-weight: bold;
+}
+
+pre a {
+  color: #3ae;
+}
+
+pre .string {
+  color: #bbb;
+}
+
+pre .bool {
+  color: #fa9;
+}
+
+.prompt {
+  position: absolute;
+  left: 30px;
+  top: 16px;
+  color: #666;
+}
+
+#input {
+  padding: 15px 0;
+}
+
+#input input {
+  padding: 4px 60px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+}
+
+#input input:focus {
+  background: #333;
+}
+
+#input .prompt {
+  top: 18px;
+}
