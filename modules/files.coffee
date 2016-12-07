@@ -24,19 +24,18 @@ exports.write = (inp, args, ctx, cb) ->
         cb null, inp
 
 # ls "dir?" -> ["filename"]
-exports.ls = (inp, args, ctx, cb) ->
+exports.ls2 = (inp, args, ctx, cb) ->
     filename = resolvePath args[0] || '.'
-    fs.readdir filename, cb
+    fs.readdir filename, (err, filenames) ->
+        filenames = filenames.filter (f) -> f[0] != '.'
+        files = filenames.filter (subfilename) ->
+            fs.lstatSync(path.join filename, subfilename).isFile()
+        dirs = filenames.filter (subfilename) ->
+            fs.lstatSync(path.join filename, subfilename).isDirectory()
+        cb null, {dirs, files}
 
 # cd "dir" -> success
 exports.cd = (inp, args, ctx, cb) ->
-    dirname = resolvePath args[0]
+    dirname = resolvePath args[0] or process.env.HOME
     process.chdir dirname
-    cb null, success: true, dir: process.cwd()
-
-# mv "from" "to" -> success
-exports.mv = (inp, args, ctx, cb) ->
-    filename0 = resolvePath args[0]
-    filename1 = resolvePath args[1]
-    fs.rename filename0, filename1, (err) ->
-        cb null, success: !err?
+    cb null

@@ -1,7 +1,10 @@
 util = require 'util'
 
 exports.prettyPrint = (o) ->
-    return util.inspect o, depth: null, colors: true
+    if typeof o == 'object'
+        return util.inspect o, depth: null, colors: true
+    else
+        "#{o}"
 
 exports.wrapone = wrapone = (f, with_inp=false) ->
     (inp, args, ctx, cb) ->
