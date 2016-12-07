@@ -76,8 +76,14 @@ PipelineREPL::startReadline = ->
     # Set up readline prompt
     fn_names = (n for n, f of repl.pipeline.fns).concat (n for n, f of builtins)
     fnCompleter = (line) ->
-        to_complete = line.split(' ').slice(-1)[0]
-        completions = fn_names.filter ((c) -> c.indexOf(to_complete) == 0)
+        line_parts = line.trim().split(/\s+/)
+        to_complete = line_parts.slice(-1)[0]
+        startsWithSofar = ((c) -> c.indexOf(to_complete) == 0)
+        file_commands = ['ls', 'cat', 'vim', 'coffee']
+        if line_parts[0] in file_commands
+            completions = fs.readdirSync('.').filter startsWithSofar
+        else
+            completions = fn_names.filter startsWithSofar
         return [completions, to_complete]
 
     rl = readline.createInterface
@@ -86,6 +92,7 @@ PipelineREPL::startReadline = ->
         completer: fnCompleter
     rlv = readline_vim(rl)
     @rl = rl
+    @context._readline = rl
 
     # Overload readline's addHistory to save to our history file
     rl_addHistory = rl._addHistory
