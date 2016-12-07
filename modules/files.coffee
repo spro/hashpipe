@@ -28,6 +28,12 @@ exports.ls = (inp, args, ctx, cb) ->
     filename = resolvePath args[0] || '.'
     fs.readdir filename, cb
 
+# cd "dir" -> success
+exports.cd = (inp, args, ctx, cb) ->
+    dirname = resolvePath args[0]
+    process.chdir dirname
+    cb null, success: true, dir: process.cwd()
+
 # mv "from" "to" -> success
 exports.mv = (inp, args, ctx, cb) ->
     filename0 = resolvePath args[0]
