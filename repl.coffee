@@ -2,6 +2,7 @@
 readline = require 'readline'
 readline_vim = require 'readline-vim'
 {Pipeline} = require './pipeline'
+moment = require 'moment'
 builtins = require './builtins'
 ansi = require('ansi')(process.stdout)
 {prettyPrint} = require './helpers'
@@ -9,12 +10,18 @@ fs = require 'fs'
 path = require 'path'
 _ = require 'underscore'
 argv = require('yargs').argv
-util = require 'util'
 
 # Helper functions
 
 getHomeDir = ->
     return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE
+
+process.on 'SIGTERM', ->
+    console.log 'sigterm'
+    process.exit()
+process.on 'SIGINT', ->
+    console.log 'sigint'
+    process.exit()
 
 # Import default modules
 
@@ -44,10 +51,11 @@ defaultPipeline = ->
         .use('keywords')
 
 PipelineREPL::writeSuccess = (data) ->
-    if @plain
-        console.log data
-    else
-        console.log prettyPrint data
+    if data?
+        if @plain
+            console.log data
+        else
+            console.log prettyPrint data
 
 PipelineREPL::writeError = (err) ->
     ansi.fg['red']()
@@ -78,12 +86,17 @@ PipelineREPL::startReadline = ->
     fnCompleter = (line) ->
         line_parts = line.trim().split(/\s+/)
         to_complete = line_parts.slice(-1)[0]
-        startsWithSofar = ((c) -> c.indexOf(to_complete) == 0)
-        file_commands = ['ls', 'cat', 'vim', 'coffee']
-        if line_parts[0] in file_commands
-            completions = fs.readdirSync('.').filter startsWithSofar
+        startsWith = (sofar) -> (s) -> s.toLowerCase().indexOf(sofar.toLowerCase()) == 0
+        file_commands = ['ls', 'cp', 'mv', 'ln', 'cd', 'cat', 'vim', 'coffee', 'python', 'git', 'open']
+        if to_complete.match '/'
+            base_dir = to_complete.split('/').slice(0,-1).join('/')
+            last_part = to_complete.split('/').slice(-1)[0]
+            to_complete = last_part
+            completions = fs.readdirSync(base_dir).filter startsWith last_part
         else
-            completions = fn_names.filter startsWithSofar
+            completions = fs.readdirSync('.').filter startsWith to_complete
+        if line_parts[0] not in file_commands
+            completions = completions.concat fn_names.filter startsWith to_complete
         return [completions, to_complete]
 
     rl = readline.createInterface
@@ -106,15 +119,15 @@ PipelineREPL::startReadline = ->
     loadHistory (err, saved_history) ->
         rl.history.push.apply(rl.history, saved_history)
 
-    @setPromptColor 36
+    @updatePrompt()
     rl.prompt()
 
     # Interpret input as scripts and run
     run_once = @run_once || !process.stdin.isTTY
-    rl.on 'line', (script) ->
+    rl.on 'line', (script) =>
         script = script.trim()
         script = 'id' if !script.length
-        repl.executeScript script, ->
+        repl.executeScript script, =>
             if run_once
                 if script_exec = argv.exec || argv.e
                     repl.executeScript script_exec, ->
@@ -122,16 +135,28 @@ PipelineREPL::startReadline = ->
                 else
                     process.exit()
             else
+                @updatePrompt()
                 rl.prompt()
+
+    rl.on 'close', ->
+        console.log 'bye'
+        process.exit()
 
 # Prompt helpers
 
-prompt_text = "#| "
-prompt_length = prompt_text.length
-PipelineREPL::setPromptColor = (color=0) ->
+colorize = (s, color) ->
     prefix = '\x1b[' + color + 'm'
     suffix = '\x1b[0m'
-    @rl.setPrompt prefix + prompt_text + suffix, prompt_length
+    prefix + s + suffix
+PipelineREPL::updatePrompt = ->
+    time = '[' + moment().format('HH:mm') + ']'
+    cwd = process.cwd().replace process.env.HOME, '~'
+    parts = [
+        colorize(time, 90)
+        colorize(cwd, 34)
+        colorize('#| ', 36)
+    ].join ' '
+    @rl.setPrompt parts
 
 # History helpers
 
