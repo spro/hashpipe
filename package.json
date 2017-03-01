@@ -1,34 +1,32 @@
 {
-    "name": "hashpipe",
-    "version": "0.0.9",
-    "description": "Object oriented shell experiment",
-    "homepage": "http://github.com/spro/hashpipe",
-    "repository": {
-        "type": "git",
-        "url": "http://github.com/spro/hashpipe.git"
-    },
-    "author": {
-        "name": "Sean Robertson",
-        "url": "http://sprobertson.com/"
-    },
-    "keywords": [
-    ],
-    "main": "lib/index.js",
-    "bin": {
-        "hashpipe": "lib/repl.js"
-    },
-    "dependencies": {
-        "ansi": "0.3.x",
-        "async": "0.9.x",
-        "jsdom": "0.x.x",
-        "jquery": "2.x.x",
-        "minimist": "0.2.x",
-        "moment": "2.7.x",
-        "readline-vim": "0.3.x",
-        "redis": "0.10.x",
-        "request": "2.x.x",
-        "underscore": "1.x.x",
-        "yargs": "1.3.x"
-    }
+  "name": "hashpipe",
+  "version": "0.0.10",
+  "description": "Object oriented shell experiment",
+  "homepage": "http://github.com/spro/hashpipe",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/spro/hashpipe.git"
+  },
+  "author": {
+    "name": "Sean Robertson",
+    "url": "http://sprobertson.com/"
+  },
+  "keywords": [],
+  "main": "lib/index.js",
+  "bin": {
+    "hashpipe": "lib/repl.js"
+  },
+  "dependencies": {
+    "ansi": "0.3.x",
+    "async": "0.9.x",
+    "jquery": "^3.1.1",
+    "jsdom": "^9.11.0",
+    "minimist": "1.2.x",
+    "moment": "2.7.x",
+    "readline-vim": "0.3.x",
+    "redis": "0.10.x",
+    "request": "2.x.x",
+    "tape": "^4.6.3",
+    "underscore": "1.x.x"
+  }
 }
-

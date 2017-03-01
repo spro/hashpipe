@@ -1,4 +1,4 @@
-parser = require './parser'
+grammar = require './grammar'
 builtins = require './builtins'
 async = require 'async'
 fs = require 'fs'
@@ -106,7 +106,7 @@ class Pipeline extends Scope
 # that can be passed to `runPipeline`
 
 parsePipelines = (cmd) ->
-    parser.parse cmd
+    grammar.parse cmd
 
 # Execute a parsed command pipeline, executing each part
 # recursively by setting a callback that is either the next
@@ -266,7 +266,7 @@ doCmd = (_args, inp, ctx, cb) ->
 
 # Splits a string into "arguments" by separating with whitespace
 # while attempting to treat quoted strings as single arguments.
-# TODO: Make a more robust parser that can handle escaping, etc.
+# TODO: Make a more robust grammar that can handle escaping, etc.
 
 splitArgs = (s) ->
     args = []

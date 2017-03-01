@@ -9,7 +9,7 @@ ansi = require('ansi')(process.stdout)
 fs = require 'fs'
 path = require 'path'
 _ = require 'underscore'
-argv = require('yargs').argv
+argv = require('minimist')(process.argv)
 
 # Helper functions
 
@@ -163,7 +163,7 @@ PipelineREPL::updatePrompt = ->
 history_path = path.resolve getHomeDir(), '.pipeline_history'
 
 saveHistory = (line) ->
-    fs.appendFile history_path, line + '\n'
+    fs.appendFileSync history_path, line + '\n'
 
 loadHistory = (cb) ->
     fs.readFile history_path, (err, history_data) ->
