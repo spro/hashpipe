@@ -4,7 +4,7 @@ start
 // @ parser
 // ~~~~~~~~
 
-letter = [a-zA-Z0-9_-~/]
+letter = [a-zA-Z0-9_~/-]
 space = [ \n\t\r]*
 comma = space "," space
 dot = space "." space { return 'get'; }
@@ -24,8 +24,8 @@ at_array = open_bracket
     close_bracket { return values; }
 
 okv =
-    k:at_word col v:at_expression { return {key: k, val: v}; }
-    / k:sub_cmd col v:at_expression { return {key: [k], val: v}; }
+    k:at_word col v:(sub_cmd / at_expression) { return {key: k, val: v}; }
+    / k:sub_cmd col v:(sub_cmd / at_expression) { return {key: [k], val: v}; }
     / k:at_word { return {key: k, val: [{get: k}]}; }
 
 at_obj = "{" space ss:(okv comma?)+ space "}" {
@@ -64,9 +64,9 @@ _squote = ['] space
 dquote_ = space ["]
 _dquote = ["] space
 
-decimal = "." ds:[0-9]+ { n = Number(ds.join('')); return n/Math.pow(10.0, ds.length); }
+decimal = "." ds:[0-9]+ { var n = Number(ds.join('')); return n/Math.pow(10.0, ds.length); }
 number = s:"-"? ds:[0-9]+ dec:decimal?
-    { n = Number(ds.join('')); n += dec || 0; if (s) n = n*-1; return n; }
+    { var n = Number(ds.join('')); n += dec || 0; if (s) n = n*-1; return n; }
 bool = "true" / "false"
 ok_char = letter / [=:/.#%!?+*%^&]
 escd_at = (l1:letter "@" l2:letter { return l1+'@'+l2; } / "\\@" { return "@"; })

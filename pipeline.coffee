@@ -343,20 +343,36 @@ descendObj = (_obj, _expr, ctx, final_cb) ->
                 if _.isString k
                     # Key is a string, just get value
                     tasks.push (_cb) ->
-                        descendObj obj, e, ctx, (err, v_obj) ->
-                            dobj =
-                                key: k
-                                val: v_obj
-                            _cb null, dobj
+                        # Check if value is a sub-command or an at-expression
+                        if e.sub?
+                            runPipelines e.sub, obj, ctx, (err, v_obj) ->
+                                dobj =
+                                    key: k
+                                    val: v_obj
+                                _cb null, dobj
+                        else
+                            descendObj obj, e, ctx, (err, v_obj) ->
+                                dobj =
+                                    key: k
+                                    val: v_obj
+                                _cb null, dobj
                 else
                     # Key is an expression, get both key value and value value
                     tasks.push (_cb) ->
                         descendObj obj, k, ctx, (err, k_obj) ->
-                            descendObj obj, e, ctx, (err, v_obj) ->
-                                dobj =
-                                    key: k_obj
-                                    val: v_obj
-                                _cb null, dobj
+                            # Check if value is a sub-command or an at-expression
+                            if e.sub?
+                                runPipelines e.sub, obj, ctx, (err, v_obj) ->
+                                    dobj =
+                                        key: k_obj
+                                        val: v_obj
+                                    _cb null, dobj
+                            else
+                                descendObj obj, e, ctx, (err, v_obj) ->
+                                    dobj =
+                                        key: k_obj
+                                        val: v_obj
+                                    _cb null, dobj
 
         # Combine results into single object
         async.parallel tasks, (err, results) ->

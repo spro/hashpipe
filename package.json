@@ -16,6 +16,13 @@
   "bin": {
     "hashpipe": "lib/repl.js"
   },
+  "scripts": {
+    "build-coffee": "coffee -o lib -c . && pegjs grammar.peg && cp grammar.js lib/",
+    "test-coffee": "coffee tests/sub_command.coffee",
+    "build": "tsc && pegjs grammar.peg && cp grammar.js lib/",
+    "test": "node lib/tests/sub_command.js",
+    "clean": "rm -rf lib lib-coffee"
+  },
   "dependencies": {
     "ansi": "0.3.x",
     "async": "0.9.x",

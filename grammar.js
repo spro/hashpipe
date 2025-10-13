@@ -141,8 +141,8 @@ function peg$parse(input, options) {
       peg$startRuleFunctions = { start: peg$parsestart },
       peg$startRuleFunction  = peg$parsestart,
 
-      peg$c0 = /^[a-zA-Z0-9_-~\/]/,
-      peg$c1 = peg$classExpectation([["a", "z"], ["A", "Z"], ["0", "9"], ["_", "~"], "/"], false, false),
+      peg$c0 = /^[a-zA-Z0-9_~\/\-]/,
+      peg$c1 = peg$classExpectation([["a", "z"], ["A", "Z"], ["0", "9"], "_", "~", "/", "-"], false, false),
       peg$c2 = /^[ \n\t\r]/,
       peg$c3 = peg$classExpectation([" ", "\n", "\t", "\r"], false, false),
       peg$c4 = ",",
@@ -193,10 +193,10 @@ function peg$parse(input, options) {
       peg$c44 = peg$classExpectation(["\""], false, false),
       peg$c45 = /^[0-9]/,
       peg$c46 = peg$classExpectation([["0", "9"]], false, false),
-      peg$c47 = function(ds) { n = Number(ds.join('')); return n/Math.pow(10.0, ds.length); },
+      peg$c47 = function(ds) { var n = Number(ds.join('')); return n/Math.pow(10.0, ds.length); },
       peg$c48 = "-",
       peg$c49 = peg$literalExpectation("-", false),
-      peg$c50 = function(s, ds, dec) { n = Number(ds.join('')); n += dec || 0; if (s) n = n*-1; return n; },
+      peg$c50 = function(s, ds, dec) { var n = Number(ds.join('')); n += dec || 0; if (s) n = n*-1; return n; },
       peg$c51 = "true",
       peg$c52 = peg$literalExpectation("true", false),
       peg$c53 = "false",
@@ -781,7 +781,10 @@ function peg$parse(input, options) {
     if (s1 !== peg$FAILED) {
       s2 = peg$parsecol();
       if (s2 !== peg$FAILED) {
-        s3 = peg$parseat_expression();
+        s3 = peg$parsesub_cmd();
+        if (s3 === peg$FAILED) {
+          s3 = peg$parseat_expression();
+        }
         if (s3 !== peg$FAILED) {
           peg$savedPos = s0;
           s1 = peg$c22(s1, s3);
@@ -804,7 +807,10 @@ function peg$parse(input, options) {
       if (s1 !== peg$FAILED) {
         s2 = peg$parsecol();
         if (s2 !== peg$FAILED) {
-          s3 = peg$parseat_expression();
+          s3 = peg$parsesub_cmd();
+          if (s3 === peg$FAILED) {
+            s3 = peg$parseat_expression();
+          }
           if (s3 !== peg$FAILED) {
             peg$savedPos = s0;
             s1 = peg$c23(s1, s3);
