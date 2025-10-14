@@ -24,7 +24,8 @@ $ hashpipe
 Bash-like command pipelines
 
 ```coffee
-#| cat names.txt | split '\n' | match John | sort
+#| use files
+#| files.cat names.txt | split '\n' | match John | sort
 [ 'John Adams',
   'John King',
   'John Lee',
@@ -57,6 +58,7 @@ Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md
 Designed for easy interaction with JSON APIs
 
 ```coffee
+#| use http
 #| http.get http://www.telize.com/geoip
 { country: 'United States',
   region: 'California',
