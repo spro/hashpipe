@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest"
 import { Pipeline } from "../lib/pipeline"
-import { _inspect, showParsed } from "./helpers"
+import { _inspect, execPipeline, showParsed } from "./helpers"
 
 // ======================
 // INPUT DATA
@@ -44,14 +44,8 @@ const test_ctx = pipe.subScope({
 // ======================
 
 // Helper to run pipeline and return promise
-const execPipeline = (cmd: string): Promise<any> => {
-    return new Promise((resolve, reject) => {
-        pipe.exec(cmd, test_input, test_ctx, (err: any, result: any) => {
-            if (err) reject(err)
-            else resolve(result)
-        })
-    })
-}
+const execScript = (cmd: string): Promise<any> =>
+    execPipeline(pipe, cmd, { input: test_input, ctx: test_ctx })
 
 // ======================
 // TESTS
@@ -61,7 +55,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("first - basic sub-command", async () => {
         const cmd = `obj name joe | echo $( @ name )`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual("joe")
     })
@@ -69,7 +63,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("sub_pipe - nested sub-commands", async () => {
         const cmd = `echo $(@ 0.name | . $(echo chee | . se) )`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual("billcheese")
     })
@@ -82,7 +76,7 @@ describe("Hashpipe Pipeline Tests", () => {
           }
         `
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual([
             {
@@ -99,7 +93,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("sub_key - sub-command as object key", async () => {
         const cmd = `echo "Howdy, Earth!" @ {$( slugify ): .}`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual({
             "howdy-earth": "Howdy, Earth!",
@@ -109,7 +103,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("sub_key_val - sub-command as both key and value", async () => {
         const cmd = `echo "Howdy, Earth!" @ {$(echo phrase): {$( slugify ): .}}`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual({
             phrase: {
@@ -121,7 +115,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("spipe - series pipe", async () => {
         const cmd = `list 4 5 6 |= + 5`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual([9, 10, 11])
     })
@@ -129,7 +123,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("sub_var - variable substitution", async () => {
         const cmd = `echo $hi`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual("hello")
     })
@@ -137,7 +131,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("multi_sub_var - multiple variable substitution", async () => {
         const cmd = `echo "$hi $world"`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual("hello earth")
     })
@@ -145,7 +139,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("escd_quoted - escaped characters with variables", async () => {
         const cmd = `echo "\\)=$cheese"`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual(")=fromage")
     })
@@ -153,7 +147,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("vars - setting and using variables", async () => {
         const cmd = `$frank = 5 ; echo $frank`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual("5")
     })
@@ -161,7 +155,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("obj_cmd - object literal command", async () => {
         const cmd = `{test: 'ok'}`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual({ test: "ok" })
     })
@@ -169,7 +163,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("obj_vars - object variables with @-expressions", async () => {
         const cmd = `$fred = {name: "Fred"} ; echo $( $fred @ name )`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual("Fred")
     })
@@ -177,7 +171,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("parse_bool - boolean parsing", async () => {
         const cmd = `true`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual(true)
     })
@@ -186,13 +180,13 @@ describe("Hashpipe Pipeline Tests", () => {
         const cmd = `trueth`
         showParsed(cmd)
         // This command doesn't exist, so it should fail
-        await expect(execPipeline(cmd)).rejects.toThrow()
+        await expect(execScript(cmd)).rejects.toThrow()
     })
 
     test("list_cmd - raw list syntax with @-expressions", async () => {
         const cmd = `[1, 2, [3, 4]] @ 2.1`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual(4)
     })
@@ -200,7 +194,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("list_objs - lists and objects combined", async () => {
         const cmd = `[{name: "Jeorge", age: 55}, {name: "Fredrick", pets: ['Kangaroo', 'Dog']}] @ 1.pets.1 | reverse`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual("goD")
     })
@@ -208,7 +202,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("set_alias - setting alias", async () => {
         const cmd = `alias sayhi = echo "hello there"`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual({
             success: true,
@@ -220,7 +214,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("use_alias - using alias", async () => {
         const cmd = `sayhi`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         expect(result).toEqual("hello there")
     })
@@ -228,7 +222,7 @@ describe("Hashpipe Pipeline Tests", () => {
     test("test_ppipe - parallel piping", async () => {
         const cmd = `range 25 || obj id $! || id @ id`
         showParsed(cmd)
-        const result = await execPipeline(cmd)
+        const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
         // Results are strings from the parallel pipe operations
         const expected = Array.from({ length: 25 }, (_, i) => String(i))

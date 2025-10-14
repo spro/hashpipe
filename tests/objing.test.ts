@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import { Pipeline } from "../lib/pipeline"
-import { _inspect, showParsed } from "./helpers"
+import { _inspect, execPipeline, showParsed } from "./helpers"
 
 const pipe = new Pipeline().use("keywords") // for slugify
 
@@ -34,19 +34,13 @@ const tests: Record<string, TestCase> = {
     },
 }
 
-const execTest = (cmd: string): Promise<any> => {
-    return new Promise((resolve, reject) => {
-        pipe.exec(cmd, {}, test_ctx, (err: any, result: any) => {
-            if (err) reject(err)
-            else resolve(result)
-        })
-    })
-}
+const execScript = (cmd: string): Promise<any> =>
+    execPipeline(pipe, cmd, { input: {}, ctx: test_ctx })
 
 for (const [test_name, test_data] of Object.entries(tests)) {
     test(test_name, async () => {
         showParsed(test_data.cmd)
-        const result = await execTest(test_data.cmd)
+        const result = await execScript(test_data.cmd)
 
         console.log("\nResult:\n", _inspect(result))
 

@@ -2,19 +2,8 @@ import { beforeAll, afterAll, describe, expect, test } from "vitest"
 import { createServer } from "http"
 import type { IncomingMessage, ServerResponse } from "http"
 import * as httpModule from "../src/modules/http"
+import { execPipeline, runHashpipeFn } from "./helpers"
 import { Pipeline } from "../lib/pipeline"
-
-const runHashpipeFn = (
-    fn: (...args: any[]) => void,
-    input: any,
-    args: any[] = [],
-): Promise<any> =>
-    new Promise((resolve, reject) => {
-        fn(input, args, {}, (err, result) => {
-            if (err) reject(err)
-            else resolve(result)
-        })
-    })
 
 function bufferBody(req: IncomingMessage): Promise<Buffer> {
     return new Promise((resolve, reject) => {
@@ -29,12 +18,7 @@ describe("http module", () => {
     const pipe = new Pipeline().use("http")
 
     const execScript = (script: string, input?: any): Promise<any> =>
-        new Promise((resolve, reject) => {
-            pipe.exec(script, input, (err: any, result: any) => {
-                if (err) reject(err)
-                else resolve(result)
-            })
-        })
+        execPipeline(pipe, script, { input })
 
     let server: ReturnType<typeof createServer>
     let baseUrl: string

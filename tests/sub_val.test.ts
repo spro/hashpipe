@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
-import { Pipeline, parsePipelines } from "../lib/pipeline"
-import { _inspect, showParsed } from "./helpers"
+import { Pipeline } from "../lib/pipeline"
+import { _inspect, execPipeline, showParsed } from "./helpers"
 
 // Test input data
 const test_input = [
@@ -26,6 +26,9 @@ const test_input = [
 const pipe = new Pipeline()
 const test_ctx = pipe.subScope()
 
+const execScript = (cmd: string) =>
+    execPipeline(pipe, cmd, { input: test_input, ctx: test_ctx })
+
 test("sub_val - sub-command in object value position", async () => {
     const cmd = `
     id @ :{
@@ -36,16 +39,7 @@ test("sub_val - sub-command in object value position", async () => {
 
     showParsed(cmd)
 
-    const result = await new Promise((resolve, reject) => {
-        pipe.exec(cmd, test_input, test_ctx, (err: any, test_result: any) => {
-            if (err) {
-                console.log("ERROR:", err)
-                reject(err)
-            } else {
-                resolve(test_result)
-            }
-        })
-    })
+    const result = await execScript(cmd)
 
     console.log("\nResult:\n", _inspect(result))
 
