@@ -110,7 +110,8 @@ function httpMethod(
                     ? applyQuery(fixUrl(rawUrl), args[1])
                     : fixUrl(rawUrl)
 
-            if (method !== "GET" && inp !== undefined) {
+            const methodHasBody = !["GET", "HEAD"].includes(method.toUpperCase())
+            if (methodHasBody && inp !== undefined) {
                 if (Buffer.isBuffer(inp)) {
                     fetchOptions.body = inp
                 } else if (inp instanceof ArrayBuffer) {
