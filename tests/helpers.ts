@@ -1,5 +1,5 @@
 import { inspect } from "util"
-import { parsePipelines } from "../lib/pipeline"
+import { parsePipelines } from "../src/pipeline"
 import type { HashpipeFunction } from "../src/helpers"
 
 interface ExecOptions {

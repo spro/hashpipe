@@ -1,9 +1,10 @@
 import { beforeAll, afterAll, describe, expect, test } from "vitest"
 import { createServer } from "http"
 import type { IncomingMessage, ServerResponse } from "http"
+
 import * as httpModule from "../src/modules/http"
+import { Pipeline } from "../src/pipeline"
 import { execPipeline, runHashpipeFn } from "./helpers"
-import { Pipeline } from "../lib/pipeline"
 
 function bufferBody(req: IncomingMessage): Promise<Buffer> {
     return new Promise((resolve, reject) => {

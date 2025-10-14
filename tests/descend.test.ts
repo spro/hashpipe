@@ -1,5 +1,5 @@
 import { test, expect } from "vitest"
-import { at } from "../lib/pipeline"
+import { at } from "../src/pipeline"
 import { _inspect } from "./helpers"
 
 const test_input = {

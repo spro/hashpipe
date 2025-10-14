@@ -1,5 +1,5 @@
 import { test, expect } from "vitest"
-import { Pipeline } from "../lib/pipeline"
+import { Pipeline } from "../src/pipeline"
 import { _inspect, execPipeline, showParsed } from "./helpers"
 
 const pipe = new Pipeline().use("keywords") // for slugify
