@@ -3,7 +3,7 @@ import * as builtins from "./builtins"
 import * as async from "async"
 import * as fs from "fs"
 import { inspect as utilInspect } from "util"
-import * as _ from "underscore"
+import { cloneShallow, isFunction, isObject, isString } from "./utils/lang"
 import { Callback, HashpipeFunction } from "./helpers"
 
 const DEBUG = false
@@ -111,7 +111,7 @@ export class Pipeline extends Scope {
             funcs: Record<string, any>,
         ) => {
             for (const [exportName, fn] of Object.entries(funcs)) {
-                if (!_.isFunction(fn)) {
+                if (!isFunction(fn)) {
                     continue
                 }
 
@@ -136,7 +136,7 @@ export class Pipeline extends Scope {
 
         let registered: string[] = []
 
-        if (_.isString(fns)) {
+        if (isString(fns)) {
             const request = fns
             let moduleName = request
             if (moduleName.match(/^\w/)) {
@@ -150,7 +150,7 @@ export class Pipeline extends Scope {
             if (
                 exportEntries.length === 1 &&
                 exportEntries[0][0] === "default" &&
-                _.isObject(exportEntries[0][1])
+                isObject(exportEntries[0][1])
             ) {
                 registerNamespace(
                     namespace,
@@ -159,7 +159,7 @@ export class Pipeline extends Scope {
             } else {
                 registerNamespace(namespace, moduleExports)
             }
-        } else if (_.isObject(fns)) {
+        } else if (isObject(fns)) {
             for (const [k, v] of Object.entries(fns)) {
                 this.set("fns", k, v)
                 registered.push(k)
@@ -262,7 +262,7 @@ export function runPipeline(
         inspect(_cmd_tokens)
         console.log("========================\n")
     }
-    const cmd_tokens = _.clone(_cmd_tokens)
+    const cmd_tokens = cloneShallow(_cmd_tokens)
     const cmd_token = cmd_tokens.shift()!
     let cmd_args = cmd_token.cmd
     const cmd_type = cmd_token.type
@@ -280,19 +280,19 @@ export function runPipeline(
         }
 
         const replaceArg = (arg: any, _cb: Callback) => {
-            if (_.isObject(arg)) {
+            if (isObject(arg)) {
                 if (arg.sub != null) {
-                    return runPipelines(arg.sub, inp, ctx, _cb)
+                    return runPipelines(arg.sub as any[], inp, ctx, _cb)
                 } else if (arg.quoted != null) {
                     return parseArgs(
                         inp,
-                        arg.quoted,
+                        arg.quoted as any[],
                         (err: Error | null, qargs?: any[]) => {
                             _cb(null, qargs?.join(" "))
                         },
                     )
                 }
-            } else if (_.isString(arg)) {
+            } else if (isString(arg)) {
                 // Int replacement
                 const intMatch = arg.match(/^-?[0-9]+$/)
                 if (intMatch) {
@@ -429,7 +429,7 @@ export function doCmd(_args: any[], inp: any, ctx: Scope, cb: Callback): void {
         inspect(inp)
         console.log("###################\n")
     }
-    const args = _.clone(_args)
+    const args = cloneShallow(_args)
     const cmd = args.shift()
     let fn = builtins[cmd]
     if (fn) {
@@ -487,8 +487,8 @@ function descendObj(
     }
 
     // This is me hoping Node has really good GC
-    const obj = _.clone(_obj)
-    const expr = _.clone(_expr)
+    const obj = cloneShallow(_obj)
+    const expr = cloneShallow(_expr)
 
     const step = expr.shift()
     if (DEBUG) {
@@ -523,24 +523,24 @@ function descendObj(
     }
     // Substitution
     else if (step.sub != null) {
-        runPipelines(step.sub, obj, ctx, cb)
+        runPipelines(step.sub as any[], obj, ctx, cb)
     }
     // Array result
-    else if (_.isArray(step.get)) {
-        const tasks = step.get.map((step_expr: any) => {
+    else if (Array.isArray(step.get)) {
+        const tasks = (step.get as any[]).map((step_expr: any) => {
             return (_cb: Callback) => descendObj(obj, step_expr, ctx, _cb)
         })
         async.parallel(tasks, cb)
     }
     // Object result
-    else if (_.isObject(step.get) && step.get.obj != null) {
+    else if (isObject(step.get) && step.get.obj != null) {
         const tasks: Array<(cb: Callback) => void> = []
-        for (const set of step.get.obj) {
+        for (const set of step.get.obj as any[]) {
             ;((set) => {
                 const k = set.key
                 const e = set.val
 
-                if (_.isString(k)) {
+                if (isString(k)) {
                     // Key is a string, just get value
                     tasks.push((_cb: Callback) => {
                         // Check if value is a sub-command or an at-expression

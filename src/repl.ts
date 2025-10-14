@@ -3,14 +3,13 @@
 import * as readline from "readline"
 import readline_vim from "readline-vim"
 import { Pipeline, Scope } from "./pipeline"
-import moment from "moment"
 import * as builtins from "./builtins"
 import ansi from "ansi"
 import { prettyPrint } from "./helpers"
 import * as fs from "fs"
 import * as path from "path"
-import * as _ from "underscore"
 import minimist from "minimist"
+import { formatDate } from "./utils/date-format"
 
 const argv = minimist(process.argv)
 const ansiCursor = ansi(process.stdout)
@@ -56,10 +55,10 @@ class PipelineREPL {
         this.context = this.pipeline.subScope()
 
         // Add command line arguments as variables
-        const base_env = _.omit(argv, "_")
-        _.forEach(base_env, (v, k) => {
-            this.context.set("vars", k, v)
-        })
+        const { _, ...baseEnv } = argv as Record<string, any>
+        for (const [key, value] of Object.entries(baseEnv)) {
+            this.context.set("vars", key, value)
+        }
 
         // Keep track of last response
         this.last_out = null
@@ -215,7 +214,7 @@ class PipelineREPL {
     }
 
     updatePrompt(): void {
-        const time = "[" + moment().format("HH:mm") + "]"
+        const time = "[" + formatDate(new Date(), "HH:mm") + "]"
         const cwd = process.cwd().replace(process.env.HOME || "", "~")
         const parts = [
             colorize(time, 90),

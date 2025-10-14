@@ -32,20 +32,15 @@
     "jquery": "^3.1.1",
     "jsdom": "^9.11.0",
     "minimist": "1.2.x",
-    "moment": "2.7.x",
     "readline-vim": "0.3.x",
-    "redis": "0.10.x",
-    "tape": "^4.6.3",
-    "underscore": "1.x.x"
+    "redis": "0.10.x"
   },
   "devDependencies": {
     "@types/async": "^3.2.25",
     "@types/jquery": "^3.5.33",
     "@types/jsdom": "^27.0.0",
     "@types/minimist": "^1.2.5",
-    "@types/moment": "^2.11.29",
     "@types/node": "^24.7.2",
-    "@types/underscore": "^1.13.0",
     "@vitest/ui": "^3.2.4",
     "prettier": "^3.6.2",
     "tsx": "^4.20.6",
