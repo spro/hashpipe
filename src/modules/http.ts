@@ -110,7 +110,9 @@ function httpMethod(
                     ? applyQuery(fixUrl(rawUrl), args[1])
                     : fixUrl(rawUrl)
 
-            const methodHasBody = !["GET", "HEAD"].includes(method.toUpperCase())
+            const methodHasBody = !["GET", "HEAD"].includes(
+                method.toUpperCase(),
+            )
             if (methodHasBody && inp !== undefined) {
                 if (Buffer.isBuffer(inp)) {
                     fetchOptions.body = inp
@@ -141,21 +143,17 @@ function httpMethod(
     }
 }
 
-// get "url" -> {data} / "html"
+// Export relevant methods
+
 export const get = httpMethod("GET")
-export const get_headers = httpMethod("GET", parseResponseHeaders)
-export const get_all = httpMethod("GET", parseResponseAll)
-
-// {data} -> post "url" -> {data} / "html"
 export const post = httpMethod("POST")
-
-// {data} -> post "url" -> {data} / "html"
 export const put = httpMethod("PUT")
-
 export const patch = httpMethod("PATCH")
 
-export const http_head = httpMethod("HEAD", parseResponseHeaders)
+export const getv = httpMethod("GET", parseResponseAll)
+export const headers = httpMethod("GET", parseResponseHeaders)
+export const options = httpMethod("OPTIONS")
 
-export const http_options = httpMethod("OPTIONS")
-
-export const http_delete = httpMethod("DELETE")
+// Special export to avoid "delete" keyword
+const deleteRequest = httpMethod("DELETE")
+export { deleteRequest as delete }

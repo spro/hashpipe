@@ -103,25 +103,74 @@ export class Scope {
 export class Context extends Scope {}
 
 export class Pipeline extends Scope {
+    private lastRegisteredFns: string[] = []
+
     use(fns: string | Record<string, HashpipeFunction>): this {
-        // Module name
+        const registerNamespace = (
+            namespace: string,
+            funcs: Record<string, any>,
+        ) => {
+            for (const [exportName, fn] of Object.entries(funcs)) {
+                if (!_.isFunction(fn)) {
+                    continue
+                }
+
+                const commandName = `${namespace}.${exportName}`
+                this.set("fns", commandName, fn as HashpipeFunction)
+
+                if (exportName === namespace) {
+                    this.set("fns", namespace, fn as HashpipeFunction)
+                    registered.push(namespace)
+                } else {
+                    registered.push(commandName)
+                }
+            }
+        }
+
+        const normalizeNamespace = (raw: string): string => {
+            const sanitized = raw.replace(/[\\/]+/g, "/")
+            const segments = sanitized.split("/").filter(Boolean)
+            const leaf = segments.length ? segments[segments.length - 1] : raw
+            return leaf.replace(/\.[^.]+$/, "")
+        }
+
+        let registered: string[] = []
+
         if (_.isString(fns)) {
-            let moduleName = fns
+            const request = fns
+            let moduleName = request
             if (moduleName.match(/^\w/)) {
                 moduleName = "./modules/" + moduleName
             }
+
+            const namespace = normalizeNamespace(request)
             const moduleExports = require(moduleName)
-            for (const [k, v] of Object.entries(moduleExports)) {
-                this.set("fns", k, v as HashpipeFunction)
+            const exportEntries = Object.entries(moduleExports)
+
+            if (
+                exportEntries.length === 1 &&
+                exportEntries[0][0] === "default" &&
+                _.isObject(exportEntries[0][1])
+            ) {
+                registerNamespace(
+                    namespace,
+                    exportEntries[0][1] as Record<string, any>,
+                )
+            } else {
+                registerNamespace(namespace, moduleExports)
             }
-        }
-        // Object of functions
-        else if (_.isObject(fns)) {
+        } else if (_.isObject(fns)) {
             for (const [k, v] of Object.entries(fns)) {
                 this.set("fns", k, v)
+                registered.push(k)
             }
         }
-        return this // for chaining
+        this.lastRegisteredFns = registered
+        return this
+    }
+
+    getLastRegisteredFns(): string[] {
+        return this.lastRegisteredFns.slice()
     }
 
     // Execute a pipeline given a command string, input object,

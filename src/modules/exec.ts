@@ -1,4 +1,4 @@
-import { exec, spawn } from "child_process"
+import { exec, spawn as spawnProcess } from "child_process"
 import { HashpipeFunction } from "../helpers"
 
 const known_spawn =
@@ -12,7 +12,7 @@ known_spawn.forEach((k) => {
     spawnCommands[k] = (inp: any, args: any[], ctx: any, cb: any) => {
         if (process.stdin.setRawMode) process.stdin.setRawMode(false)
         ctx._readline?.pause()
-        const child = spawn(k, args, {
+        const child = spawnProcess(k, args, {
             stdio: "inherit",
             cwd: process.cwd(),
             env: process.env,
@@ -26,13 +26,13 @@ known_spawn.forEach((k) => {
     }
 })
 
-export const exec_cmd: HashpipeFunction = (inp, args, ctx, cb) => {
+export const cmd: HashpipeFunction = (inp, args, ctx, cb) => {
     exec(args.join(" "), (err, stdout, stderr) => {
         cb(null, stdout)
     })
 }
 
-export const spawn_cmd: HashpipeFunction = (inp, args, ctx, cb) => {
+export const spawn: HashpipeFunction = (inp, args, ctx, cb) => {
     if (process.stdin.setRawMode) process.stdin.setRawMode(false)
     ctx._readline?.pause()
 
@@ -41,7 +41,7 @@ export const spawn_cmd: HashpipeFunction = (inp, args, ctx, cb) => {
         spawnArgs = args[0].split(" ")
     }
 
-    const child = spawn(spawnArgs[0], spawnArgs.slice(1), {
+    const child = spawnProcess(spawnArgs[0], spawnArgs.slice(1), {
         stdio: "inherit",
         cwd: process.cwd(),
         env: process.env,

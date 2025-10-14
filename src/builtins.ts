@@ -3,6 +3,7 @@ import * as _ from "underscore"
 import { inspect } from "util"
 import * as helpers from "./helpers"
 import { Callback, HashpipeFunction } from "./helpers"
+import type { Pipeline } from "./pipeline"
 
 const _inspect = (o: any) => inspect(o, { depth: null })
 
@@ -499,10 +500,22 @@ builtins.ginc = (inp: any, args: any[], ctx: any, cb: Callback) => {
 // Including modules
 
 builtins.use = (inp: any, args: any[], ctx: any, cb: Callback) => {
-    for (const arg of args) {
-        ctx.topScope().use(arg)
+    const importedFns: string[] = []
+    const topScope = ctx.topScope()
+    const pipeline = topScope as Pipeline & {
+        getLastRegisteredFns?: () => string[]
     }
-    cb(null, "Using: " + args.join(", "))
+
+    for (const arg of args) {
+        pipeline.use(arg)
+        if (typeof pipeline.getLastRegisteredFns === "function") {
+            importedFns.push(...pipeline.getLastRegisteredFns())
+        }
+    }
+
+    const uniqueImported = [...new Set(importedFns)]
+    const messageItems = uniqueImported.length ? uniqueImported : args
+    cb(null, "Using: " + messageItems.join(", "))
 }
 
 builtins.alias = (inp: any, args: any[], ctx: any, cb: Callback) => {

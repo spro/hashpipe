@@ -91,7 +91,7 @@ describe("Hashpipe Pipeline Tests", () => {
     })
 
     test("sub_key - sub-command as object key", async () => {
-        const cmd = `echo "Howdy, Earth!" @ {$( slugify ): .}`
+        const cmd = `echo "Howdy, Earth!" @ {$( keywords.slugify ): .}`
         showParsed(cmd)
         const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
@@ -101,7 +101,7 @@ describe("Hashpipe Pipeline Tests", () => {
     })
 
     test("sub_key_val - sub-command as both key and value", async () => {
-        const cmd = `echo "Howdy, Earth!" @ {$(echo phrase): {$( slugify ): .}}`
+        const cmd = `echo "Howdy, Earth!" @ {$(echo phrase): {$( keywords.slugify ): .}}`
         showParsed(cmd)
         const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))

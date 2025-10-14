@@ -24,75 +24,85 @@ describe("http module", () => {
     let baseUrl: string
 
     beforeAll(async () => {
-        server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-            const { method, url } = req
-            if (!url) {
-                res.statusCode = 400
-                res.end("missing url")
-                return
-            }
+        server = createServer(
+            async (req: IncomingMessage, res: ServerResponse) => {
+                const { method, url } = req
+                if (!url) {
+                    res.statusCode = 400
+                    res.end("missing url")
+                    return
+                }
 
-            if (method === "GET" && url.startsWith("/json")) {
-                const responseBody = { hello: "world", url }
-                res.setHeader("Content-Type", "application/json")
-                res.setHeader("X-Test-Header", "hashpipe")
-                res.end(JSON.stringify(responseBody))
-                return
-            }
+                if (method === "GET" && url.startsWith("/json")) {
+                    const responseBody = { hello: "world", url }
+                    res.setHeader("Content-Type", "application/json")
+                    res.setHeader("X-Test-Header", "hashpipe")
+                    res.end(JSON.stringify(responseBody))
+                    return
+                }
 
-            if (method === "POST" && url === "/echo") {
-                const bodyBuffer = await bufferBody(req)
-                const bodyString = bodyBuffer.toString() || "{}"
-                res.setHeader("Content-Type", "application/json")
-                res.end(JSON.stringify({
-                    received: bodyString,
-                    contentType: req.headers["content-type"],
-                }))
-                return
-            }
+                if (method === "POST" && url === "/echo") {
+                    const bodyBuffer = await bufferBody(req)
+                    const bodyString = bodyBuffer.toString() || "{}"
+                    res.setHeader("Content-Type", "application/json")
+                    res.end(
+                        JSON.stringify({
+                            received: bodyString,
+                            contentType: req.headers["content-type"],
+                        }),
+                    )
+                    return
+                }
 
-            if (method === "PUT" && url === "/payload") {
-                const bodyBuffer = await bufferBody(req)
-                res.setHeader("Content-Type", "application/json")
-                res.end(bodyBuffer)
-                return
-            }
+                if (method === "PUT" && url === "/payload") {
+                    const bodyBuffer = await bufferBody(req)
+                    res.setHeader("Content-Type", "application/json")
+                    res.end(bodyBuffer)
+                    return
+                }
 
-            if (method === "PATCH" && url === "/mutate") {
-                const bodyBuffer = await bufferBody(req)
-                const parsed = JSON.parse(bodyBuffer.toString() || "{}")
-                res.setHeader("Content-Type", "application/json")
-                res.end(JSON.stringify({
-                    ...parsed,
-                    patched: true,
-                }))
-                return
-            }
+                if (method === "PATCH" && url === "/mutate") {
+                    const bodyBuffer = await bufferBody(req)
+                    const parsed = JSON.parse(bodyBuffer.toString() || "{}")
+                    res.setHeader("Content-Type", "application/json")
+                    res.end(
+                        JSON.stringify({
+                            ...parsed,
+                            patched: true,
+                        }),
+                    )
+                    return
+                }
 
-            if (method === "DELETE" && url === "/resource/123") {
-                res.statusCode = 204
-                res.setHeader("X-Deleted", "true")
-                res.end()
-                return
-            }
+                if (method === "DELETE" && url === "/resource/123") {
+                    res.statusCode = 204
+                    res.setHeader("X-Deleted", "true")
+                    res.end()
+                    return
+                }
 
-            if (method === "HEAD" && url === "/json") {
-                res.setHeader("X-Test-Header", "hashpipe")
-                res.statusCode = 200
-                res.end()
-                return
-            }
+                if (method === "HEAD" && url === "/json") {
+                    res.setHeader("X-Test-Header", "hashpipe")
+                    res.statusCode = 200
+                    res.end()
+                    return
+                }
 
-            if (method === "OPTIONS" && url === "/json") {
-                res.setHeader("Allow", "GET,HEAD,POST,OPTIONS")
-                res.setHeader("Content-Type", "application/json")
-                res.end(JSON.stringify({ allow: ["GET", "HEAD", "POST", "OPTIONS"] }))
-                return
-            }
+                if (method === "OPTIONS" && url === "/json") {
+                    res.setHeader("Allow", "GET,HEAD,POST,OPTIONS")
+                    res.setHeader("Content-Type", "application/json")
+                    res.end(
+                        JSON.stringify({
+                            allow: ["GET", "HEAD", "POST", "OPTIONS"],
+                        }),
+                    )
+                    return
+                }
 
-            res.statusCode = 404
-            res.end("not found")
-        })
+                res.statusCode = 404
+                res.end("not found")
+            },
+        )
 
         await new Promise<void>((resolve, reject) => {
             server.once("error", reject)
@@ -117,27 +127,22 @@ describe("http module", () => {
         }
     })
 
-    test("pipeline GET merges query params", async () => {
+    test("http.get merges query params", async () => {
         const result = await execScript(
-            `get "${baseUrl}/json" $( obj filter yes )`,
+            `http.get "${baseUrl}/json" $( obj filter yes )`,
         )
         expect(result).toEqual({ hello: "world", url: "/json?filter=yes" })
     })
 
-    test("pipeline get_headers returns response headers", async () => {
-        const headers = await execScript(`get_headers "${baseUrl}/json"`)
-        expect(headers).toMatchObject({ "x-test-header": "hashpipe" })
-    })
-
-    test("pipeline get_all returns data and headers", async () => {
-        const response = await execScript(`get_all "${baseUrl}/json"`)
+    test("http.getv (verbose) returns data and headers", async () => {
+        const response = await execScript(`http.getv "${baseUrl}/json"`)
         expect(response.data).toEqual({ hello: "world", url: "/json" })
         expect(response.headers["content-type"]).toContain("application/json")
     })
 
-    test("pipeline POST sends upstream JSON", async () => {
+    test("http.post sends upstream JSON", async () => {
         const result = await execScript(
-            `obj message hi | post "${baseUrl}/echo"`,
+            `obj message hi | http.post "${baseUrl}/echo"`,
         )
         expect(result).toEqual({
             received: JSON.stringify({ message: "hi" }),
@@ -145,42 +150,46 @@ describe("http module", () => {
         })
     })
 
-    test("pipeline PUT passes through string payloads", async () => {
+    test("http.put passes through string payloads", async () => {
         const result = await execScript(
-            `echo "raw text" | put "${baseUrl}/payload"`,
+            `echo "raw text" | http.put "${baseUrl}/payload"`,
         )
         expect(result).toEqual("raw text")
     })
 
-    test("pipeline PATCH merges JSON bodies", async () => {
+    test("http.patch merges JSON bodies", async () => {
         const result = await execScript(
-            `obj flag $( true ) | patch "${baseUrl}/mutate"`,
+            `obj flag $( true ) | http.patch "${baseUrl}/mutate"`,
         )
         expect(result).toEqual({ flag: true, patched: true })
     })
 
-    test("pipeline HEAD exposes headers", async () => {
-        const headers = await execScript(`http_head "${baseUrl}/json"`)
-        expect(headers).toMatchObject({ "x-test-header": "hashpipe" })
-    })
-
-    test("pipeline OPTIONS parses JSON body", async () => {
-        const response = await execScript(`http_options "${baseUrl}/json"`)
+    test("http.options parses JSON body", async () => {
+        const response = await execScript(`http.options "${baseUrl}/json"`)
         expect(response).toEqual({ allow: ["GET", "HEAD", "POST", "OPTIONS"] })
     })
 
-    test("pipeline DELETE commands return no-content", async () => {
+    test("http.delete commands return no-content", async () => {
         const deleteResult = await execScript(
-            `http_delete "${baseUrl}/resource/123"`,
+            `http.delete "${baseUrl}/resource/123"`,
         )
         expect(deleteResult).toEqual("")
 
-        const delResult = await execScript(`http_delete "${baseUrl}/resource/123"`)
+        const delResult = await execScript(
+            `http.delete "${baseUrl}/resource/123"`,
+        )
         expect(delResult).toEqual("")
     })
 
+    test("http.headers returns response headers", async () => {
+        const headers = await execScript(`http.headers "${baseUrl}/json"`)
+        expect(headers).toMatchObject({ "x-test-header": "hashpipe" })
+    })
+
     test("direct get helper still works", async () => {
-        const result = await runHashpipeFn(httpModule.get, undefined, [`${baseUrl}/json`])
+        const result = await runHashpipeFn(httpModule.get, undefined, [
+            `${baseUrl}/json`,
+        ])
         expect(result).toEqual({ hello: "world", url: "/json" })
     })
 })
