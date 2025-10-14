@@ -34,7 +34,7 @@ export const write: HashpipeFunction = (inp, args, ctx, cb) => {
 }
 
 // ls "dir?" -> ["filename"]
-export const ls2: HashpipeFunction = (inp, args, ctx, cb) => {
+export const ls: HashpipeFunction = (inp, args, ctx, cb) => {
     const filename = resolvePath(args[0] || ".")
     fs.readdir(filename, (err, filenames) => {
         if (err) return cb(err)
