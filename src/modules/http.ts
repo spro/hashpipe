@@ -151,5 +151,10 @@ export const post = httpMethod("POST")
 // {data} -> post "url" -> {data} / "html"
 export const put = httpMethod("PUT")
 
-// delete "url" -> ok
-export { httpMethod as delete }
+export const patch = httpMethod("PATCH")
+
+export const http_head = httpMethod("HEAD", parseResponseHeaders)
+
+export const http_options = httpMethod("OPTIONS")
+
+export const http_delete = httpMethod("DELETE")
