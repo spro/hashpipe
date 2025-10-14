@@ -6,11 +6,11 @@ Let's start by figuring out where Google's servers live. Maybe getting an IP add
 
 ```coffee
 #| use exec
-#| exec "dig +short google.com"
+#| exec.cmd "dig +short google.com"
 '74.125.224.7\n74.125.224.0\n74.125.224.14\n74.125.224.2\n...'
 ```
 
-By importing the `exec` module we are granted the `exec` command which will run system commands for us. Using the system `dig +short` command we can then get Google's IP addresses. But this line-based format is archaic, let's turn it into an array:
+By importing the `exec` module we can call the namespaced `exec.cmd` command to run system binaries for us. Using the system `dig +short` command we can then get Google's IP addresses. But this line-based format is archaic, let's turn it into an array:
 
 ```coffee
 #| split '\n'
@@ -35,7 +35,7 @@ Again using the last command's output, we use an `@`-expression to get the first
 So we have an IP address, but weather tends to be based on physical location. Luckily telize.com has a handy JSON API for geolocating IP addresses. Let's try that.
 
 ```coffee
-#| get telize.com/geoip/$ip | set where
+#| http.get telize.com/geoip/$ip | set where
 { ip: '74.125.224.7',
   country: 'United States',
   region: 'California',
@@ -50,7 +50,7 @@ Perfect, a full location including coordinates. I piped the result right into `s
 From here we would just need... a JSON weather API that takes latitude & longitude? Lucky again, openweathermap.org offers just that:
 
 ```coffee
-#| get api.openweathermap.org/data/2.5/weather {lat: $where @ latitude, lon: $where @ longitude} | set weather
+#| http.get api.openweathermap.org/data/2.5/weather {lat: $where @ latitude, lon: $where @ longitude} | set weather
 { main: 
    { temp: 283.35,
      humidity: 72,
@@ -62,7 +62,7 @@ From here we would just need... a JSON weather API that takes latitude & longitu
   dt: 1423993404 }
 ```
 
-Notice the second argument to the `get` command is a JSON object, which will be turned into a query string `"?lat=...&lon=..."` and added to the URL. This particular query object is built with `@`-expressions pulling the coordinates from the previous command's output.
+Notice the second argument to the `http.get` command is a JSON object, which will be turned into a query string `"?lat=...&lon=..."` and added to the URL. This particular query object is built with `@`-expressions pulling the coordinates from the previous command's output.
 
 Now we have what appears to be a firestorm on our hands with this 283 degree reading. It turns out this API returns temperature values as Kelvin, so to satisfy my feeble American mind a conversion is in order.
 
@@ -79,14 +79,14 @@ That makes more sense. And it appears that it's a normal night in Mountain View,
 The full pipeline:
 
 ```coffee
-#| exec "dig +short google.com" | split '\n' | @ 0 | set ip | get freegeoip.net/json/$ip | set where | get api.openweathermap.org/data/2.5/weather {lat: $where @ latitude, lon: $where @ longitude} @ main.temp | k-to-f
+#| exec.cmd "dig +short google.com" | split '\n' | @ 0 | set ip | http.get freegeoip.net/json/$ip | set where | http.get api.openweathermap.org/data/2.5/weather {lat: $where @ latitude, lon: $where @ longitude} @ main.temp | k-to-f
 50.36
 ```
 
 As an alias:
 
 ```coffee
-#| alias server-temp = echo | exec "dig +short $!" | split '\n' | @ 0 | set ip | get freegeoip.net/json/$ip | set where | get api.openweathermap.org/data/2.5/weather {lat: $where @ latitude, lon: $where @ longitude} @ main.temp | k-to-f
+#| alias server-temp = echo | exec.cmd "dig +short $!" | split '\n' | @ 0 | set ip | http.get freegeoip.net/json/$ip | set where | http.get api.openweathermap.org/data/2.5/weather {lat: $where @ latitude, lon: $where @ longitude} @ main.temp | k-to-f
 
 #| server-temp news.ycombinator.com
 51.50

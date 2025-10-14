@@ -9,14 +9,14 @@ In this walkthrough you'll [retreive data from a JSON API](#retreiving-api-data)
 The [Firebase HN API](https://github.com/HackerNews/API) query for "top stories" returns a list of post IDs:
 
 ```coffee
-#| get https://hacker-news.firebaseio.com/v0/topstories.json
+#| http.get https://hacker-news.firebaseio.com/v0/topstories.json
 [ 9053496, 9053286, 9052925, 9053621, 9053694, ... ]
 ```
 
 We can get data for a single post using its ID:
 
 ```coffee
-#| get https://hacker-news.firebaseio.com/v0/item/9050970.json
+#| http.get https://hacker-news.firebaseio.com/v0/item/9050970.json
 { id: 9050970,
   time: 1423952713,
   title: 'Show HN: A Unixy approach to WebSockets',
@@ -32,22 +32,22 @@ This would be a little easier if we didn't have to type out *"http://hacker-news
 
 ```coffee
 #| set hnapi https://hacker-news.firebaseio.com/v0
-#| get $hnapi/topstories.json
+#| http.get $hnapi/topstories.json
 [ 9053496, 9053286, 9052925, 9053621, 9053694, ... ]
 ```
 
 ### Making many requests in parallel
 
-Using that array of story IDs, we could get full data for each post by making a request to the `items/(id).json` endpoint. Hashpipe has a convenient parallel pipe `||` that will help to acheive this. This is going to pass each item in `$ids` to an individual `get` request, returning the results as a new array.
+Using that array of story IDs, we could get full data for each post by making a request to the `items/(id).json` endpoint. Hashpipe has a convenient parallel pipe `||` that will help to acheive this. This is going to pass each item in `$ids` to an individual `http.get` request, returning the results as a new array.
 
 ```coffee
-#| get $hnapi/topstories.json | set ids
+#| http.get $hnapi/topstories.json | set ids
 [ 9053496, 9053286, 9052925, 9053621, 9053694, ... ]
 
 #| $ids | length
 100
 
-#| $ids || get $hnapi/item/$!.json | set stories
+#| $ids || http.get $hnapi/item/$!.json | set stories
 [ { id: 9053496,
     time: 1424025204,
     title: '64-bit Linux Return-Oriented Programming',
@@ -266,7 +266,7 @@ Right away we can see there may be some true power-submitters. But are they karm
 Then we can use the HN API route `user/(username).json` to get data about each user:
 
 ```coffee
-#| $usernames || get $hnapi/user/$!.json | set users
+#| $usernames || http.get $hnapi/user/$!.json | set users
 [ { id: 'desdiv',
     karma: 828,
     about: '',
@@ -502,7 +502,7 @@ Every story has an array of comment IDs called `kids`. Comments are retreived fr
 #| $stories @ 10.kids
 [ 9054140, 9054088, 9053550, 9053989 ]
 
-#| $stories @ 10.kids || get $hnapi/item/$!.json | set comments
+#| $stories @ 10.kids || http.get $hnapi/item/$!.json | set comments
 [ { id: 9054140,
     by: 'TheLoneWolfling',
     text: 'It should be possible to use a SMT solver to ...',

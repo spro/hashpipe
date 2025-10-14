@@ -6,7 +6,7 @@ Featuring:
 
 * JSON-typed input & output (strings, numbers, objects, and arrays)
 * Alternative piping constructs (like the parallel pipe `||` and sequential pipe `|=`)
-* Modular design (`use`ing modules and `alias`ing commands)
+* Modular design (`use` modules to unlock namespaced commands like `http.get` and `files.cat`)
 
 ## Getting started
 
@@ -57,13 +57,13 @@ Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md
 Designed for easy interaction with JSON APIs
 
 ```coffee
-#| get http://www.telize.com/geoip
+#| http.get http://www.telize.com/geoip
 { country: 'United States',
   region: 'California',
   city: 'Mountain View',
   postal_code: '94043' }
 
-#| {encoded: 'SGV5IHRoZXJl'} | post http://spro.webscript.io/base64
+#| {encoded: 'SGV5IHRoZXJl'} | http.post http://spro.webscript.io/base64
 { decoded: 'Hey there' }
 ```
 
