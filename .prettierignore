@@ -1,0 +1,10 @@
+node_modules/
+lib/
+*.js
+*.coffee
+*.peg
+*.md
+*.json
+tests-coffee/
+docs/
+.git/

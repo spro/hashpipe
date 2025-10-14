@@ -17,11 +17,14 @@
     "hashpipe": "lib/repl.js"
   },
   "scripts": {
-    "build-coffee": "coffee -o lib -c . && pegjs grammar.peg && cp grammar.js lib/",
-    "test-coffee": "coffee tests/sub_command.coffee",
-    "build": "tsc && pegjs grammar.peg && cp grammar.js lib/",
-    "test": "node lib/tests/sub_command.js",
-    "clean": "rm -rf lib lib-coffee"
+    "build-ts": "tsc",
+    "build-grammar": "pegjs -o src/grammar.js grammar.peg && cp src/grammar.js lib/grammar.js",
+    "build": "npm run build-grammar && npm run build-ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'"
   },
   "dependencies": {
     "ansi": "0.3.x",
@@ -32,8 +35,21 @@
     "moment": "2.7.x",
     "readline-vim": "0.3.x",
     "redis": "0.10.x",
-    "request": "2.x.x",
     "tape": "^4.6.3",
     "underscore": "1.x.x"
+  },
+  "devDependencies": {
+    "@types/async": "^3.2.25",
+    "@types/jquery": "^3.5.33",
+    "@types/jsdom": "^27.0.0",
+    "@types/minimist": "^1.2.5",
+    "@types/moment": "^2.11.29",
+    "@types/node": "^24.7.2",
+    "@types/underscore": "^1.13.0",
+    "@vitest/ui": "^3.2.4",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }
