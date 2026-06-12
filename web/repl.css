@@ -6,6 +6,12 @@ html, body {
 }
 
 body {
+  /* dvh tracks the on-screen keyboard on mobile; 100% is the fallback */
+  height: 100vh;
+  height: 100dvh;
+}
+
+body {
   display: flex;
   flex-direction: column;
   background: #14171c;
@@ -118,4 +124,35 @@ footer .try { margin-right: 8px; }
 .example:hover {
   border-color: #56c8d8;
   color: #d6dbe2;
+}
+
+@media (max-width: 600px) {
+  header {
+    padding: 12px 14px 8px;
+  }
+
+  header h1 { font-size: 17px; }
+
+  .tagline {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  #terminal { padding: 10px 14px; }
+
+  /* 16px stops iOS Safari from zooming into the focused input */
+  #input { font-size: 16px; }
+
+  /* One swipeable row of examples instead of a half-screen block */
+  footer {
+    padding: 8px 14px calc(10px + env(safe-area-inset-bottom));
+    white-space: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  footer::-webkit-scrollbar { display: none; }
+
+  .example { margin: 0 8px 0 0; }
 }
