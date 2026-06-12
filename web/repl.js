@@ -98,16 +98,32 @@
 
     // ---- execution ----
 
+    var SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
     function run(script) {
         var entry = div("entry")
         var cmdline = div("cmdline")
         cmdline.appendChild(span("prompt", "#|"))
         cmdline.appendChild(span("cmd", script))
         entry.appendChild(cmdline)
+
+        // Loading placeholder: sync pipelines finish before the next paint,
+        // so the spinner is only ever visible for slow async work (fetches)
+        var pending = div("pending")
+        pending.textContent = SPINNER_FRAMES[0]
+        entry.appendChild(pending)
+        var frame = 0
+        var spinner = setInterval(function () {
+            frame = (frame + 1) % SPINNER_FRAMES.length
+            pending.textContent = SPINNER_FRAMES[frame]
+        }, 80)
+
         append(entry)
 
         input.disabled = true
         shell.exec(script, function (err, data) {
+            clearInterval(spinner)
+            entry.removeChild(pending)
             if (err != null) {
                 var errLine = div("error")
                 errLine.textContent = "[ERROR] " + err
