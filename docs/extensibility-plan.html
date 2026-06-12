@@ -134,7 +134,7 @@
     <li><a href="#f1">First-class functions: lambdas + <code>def</code> + alias rework</a> <span class="effort s">SHIPPED 2026-06-11</span></li>
     <li><a href="#f2">Pipe-operator registry + error pipe <code>|?</code></a> <span class="effort s">SHIPPED 2026-06-12</span></li>
     <li><a href="#f3">Command lookup order (builtins last)</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
-    <li><a href="#f5">Grammar paper cuts (comments, escapes, quoted keys, <code>${var}</code>)</a> <span class="effort m">MEDIUM</span></li>
+    <li><a href="#f5">Grammar paper cuts (comments, escapes, quoted keys, <code>${var}</code>)</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
     <li><a href="#f6">Docs: module-author guide + Syntax.md gaps</a> <span class="effort s">SMALL</span></li>
     <li><a href="#f4">User module search path</a> <span class="effort m">DEPRIORITIZED</span></li>
   </ol>
@@ -363,7 +363,7 @@ null
 
 <!-- ============================================================ -->
 <h2 id="f5"><span class="num">4</span> Grammar paper cuts</h2>
-<p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b> (parseArgs) &nbsp;·&nbsp; Effort: <span class="effort m">MEDIUM</span> (four independent small fixes)</p>
+<p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b> (parseArgs) &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — tests in tests/grammar.test.ts, docs in Syntax.md (§ Statements and comments, § Variables, § At-expressions). All four landed, with newline-as-separator accepted globally as recommended: statements split on newlines (pipe continuations still span lines because <code>pipe_op</code> and at-expressions consume newlines), <code>#</code> comments at statement position, one generic escape rule (<code>\$</code> keeps its backslash for parseArgs), quoted keys + <code>*</code> wildcard in at-expressions, <code>${var}</code> splicing, typed lone-var pass-through, the <code>$&amp;</code> replace bug fix, a <code>null</code> literal, and the dead <code>bool</code> rule removed. Slices (<code>[0..3]</code>) deferred as planned.</p>
 
 <h3>5a — Comments</h3>
 <p><code>#</code> is in <code>ok_char</code> (URLs contain fragments), so comments must be position-aware, not lexical. Plan: introduce a statement-level rule — <code>comment = space "#" [^\n;]*</code> — allowed wherever a <code>pipeline</code> can appear in the <code>pipelines</code> list, and treat newline as a pipeline separator alongside <code>;</code> in file/<code>--run</code> mode. <code>#</code> mid-word stays a literal character.</p>
@@ -539,7 +539,7 @@ escd_char = "\\" c:. { return c; }
   <tr>
     <td class="phase">4 — sugar</td>
     <td>5a comments · 5b generic escapes · 5c quoted keys/wildcard · 5d <code>${var}</code>/typed interpolation + replace-bug fix</td>
-    <td>Next up. Each independent; comments first (scripts benefit immediately), typed interpolation last (only structural grammar change).</td>
+    <td><span class="effort s">SHIPPED 2026-06-12</span> — all four sub-items in one pass; newline-as-separator accepted globally.</td>
   </tr>
   <tr>
     <td class="phase">5 — docs</td>

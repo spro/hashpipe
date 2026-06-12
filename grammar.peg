@@ -14,6 +14,7 @@ start
 
 letter = [a-zA-Z0-9_~/-]
 space = [ \n\t\r]*
+hspace = [ \t\r]*
 comma = space "," space
 dot = space "." space { return 'get'; }
 col = space ":" space { return 'map'; }
@@ -41,7 +42,10 @@ at_obj = "{" space ss:(okv comma?)+ space "}" {
     return {obj: ss};
 }
 
-section = at_obj / at_array / at_word
+at_quoted = q:quoted_literal { return q.quoted.join(''); }
+at_wild = "*" { return "*"; }
+
+section = at_obj / at_array / at_quoted / at_wild / at_word
 
 do_sub = (s:dot t:sub_cmd { return t; })
 do_sub_ = (s:dot? t:sub_cmd { return t; })
@@ -54,7 +58,7 @@ at_expression =
     space
     head:(do_get_/do_sub_/do_map)
     tail:do_section*
-    space
+    hspace
     {
         return [head].concat(tail);
     }
@@ -66,26 +70,36 @@ at_expression =
 // operator and the runtime registry (pipeline.ts) decides what it means.
 // Unknown suffixes parse but fail loudly at runtime.
 pipe_op = space "|" suffix:[|=?&^~]? space { return "|" + (suffix || ""); }
-squote = space ['] space
-dquote = space ["] space
-squote_ = space [']
-_squote = ['] space
-dquote_ = space ["]
-_dquote = ["] space
+// Trailing whitespace after a closing quote stays horizontal so a
+// newline can still act as a statement separator
+squote = hspace ['] hspace
+dquote = hspace ["] hspace
+squote_ = hspace [']
+_squote = ['] hspace
+dquote_ = hspace ["]
+_dquote = ["] hspace
 
 decimal = "." ds:[0-9]+ { var n = Number(ds.join('')); return n/Math.pow(10.0, ds.length); }
 number = s:"-"? ds:[0-9]+ dec:decimal?
     { var n = Number(ds.join('')); n += dec || 0; if (s) n = n*-1; return n; }
-bool = "true" / "false"
 ok_char = letter / [=:/.#%!?+*%^&]
-escd_at = (l1:letter "@" l2:letter { return l1+'@'+l2; } / "\\@" { return "@"; })
-escd_paren = "\\(" { return "("; } / "\\)" { return ")"; }
-escd_dolla = "\\$"
-escd_char = escd_at / escd_paren / escd_dolla
+// One escape rule covers every metacharacter, present and future.
+// \$ keeps its backslash so parseArgs never treats it as a variable
+// (it strips the backslash after substitution). letter@letter lets
+// emails and handles keep a bare @ mid-word.
+mid_at = l1:letter "@" l2:letter { return l1+'@'+l2; }
+escd_char = mid_at
+    / "\\$" { return "\\$"; }
+    / "\\" c:. { return c; }
 letter_word = ls:letter+ { return ls.join(''); }
-var_word = "$" w:letter_word { return '$' + w; }
+var_word = "${" w:letter_word "}" { return '$' + w; }
+    / "$" w:letter_word { return '$' + w; }
     / "$!"
-cmd_char = escd_char / ok_char / var_word
+// Inside words the braced form keeps its braces so ${file}_v2 can be
+// spliced without eating the suffix; parseArgs resolves it.
+var_ref = "${" w:letter_word "}" { return '${' + w + '}'; }
+    / var_word
+cmd_char = escd_char / ok_char / var_ref
 cmd_word = cs:cmd_char+ { return cs.join('').trim(); }
 squoted_cmd = squote cmd:cmd squote { return {quoted: cmd}; }
 dquoted_cmd = dquote cmd:cmd dquote { return {quoted: cmd}; }
@@ -115,7 +129,7 @@ bool_word = "true" / "false"
 
 cmd = obj_cmd / list_cmd /
       head:cmd_phrase
-      tail:(space c:cmd_phrase { return c; })*
+      tail:(hspace c:cmd_phrase { return c; })*
       { return [head].concat(tail); }
 
 // Infix expressions: $n * 7, 2 + 3 * 4, $(@ age) > 30
@@ -172,7 +186,8 @@ start_cmd =
     / var_exp
     / number:number { return {val: number}; }
     / quoted:quoted_phrase { return {val: quoted}; }
-    / bool:bool_word { return {val: bool == 'true'}; }
+    / bool:bool_word !letter { return {val: bool == 'true'}; }
+    / "null" !letter { return {val: null}; }
     / lambda:lambda { return {val: lambda}; }
     / cmd_at:cmd_at { cmd_at.type = '|'; return cmd_at; }
 piped_cmd =
@@ -194,14 +209,29 @@ pipeline =
     space
     head:cmd_section
     tail:cmd_section*
-    space
+    hspace
     { if (head) return [head].concat(tail); else return tail; }
 
-semi = space ";" space
+// Statements are separated by ';' or newline. A '#' at statement
+// position starts a comment (to end of line or ';'); '#' mid-word is
+// literal. Pipe continuations still span lines because pipe_op and
+// at-expressions consume newlines themselves.
+stmt_sep = hspace (";" / "\n") space
+comment = hspace "#" [^\n;]* { return null; }
+
+statement =
+    comment
+    / pipeline
+    / hspace { return null; }
+
 pipelines =
-    head:pipeline
-    tail:(semi pipeline:pipeline { return pipeline; })*
-    { return [head].concat(tail); }
+    head:statement
+    tail:(stmt_sep s:statement { return s; })*
+    {
+        var stmts = [head].concat(tail).filter(function(s) { return s != null; });
+        if (!stmts.length) return [[{cmd: ['id']}]];
+        return stmts;
+    }
 
 aliasing =
     space "alias" space alias:letter_word space "=" space body:alias_body

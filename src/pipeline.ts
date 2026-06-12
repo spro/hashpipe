@@ -329,8 +329,28 @@ export function runPipeline(
                 }
                 // Within string replacement
                 else {
+                    // Braced ${var} splices explicitly without eating a
+                    // suffix: ${file}_v2 expands $file then appends _v2
+                    let braced: RegExpMatchArray | null
+                    while (
+                        typeof arg === "string" &&
+                        (braced = arg.match(/\$\{([!a-zA-Z0-9_-]+)\}/))
+                    ) {
+                        const key = braced[1]
+                        const val = key === "!" ? inp : ctx.get("vars", key)
+                        // A lone variable passes its value through with
+                        // its type intact (objects stay objects)
+                        if (arg === braced[0]) {
+                            arg = val
+                            break
+                        }
+                        arg = arg.replace(braced[0], () => String(val))
+                    }
                     let $key: RegExpMatchArray | null
-                    while (($key = arg.match(/\$[!a-zA-Z0-9_-]+/))) {
+                    while (
+                        typeof arg === "string" &&
+                        ($key = arg.match(/\$[!a-zA-Z0-9_-]+/))
+                    ) {
                         const key_str = $key[0]
                         let val: any
                         if (key_str === "$!") {
@@ -339,13 +359,15 @@ export function runPipeline(
                             const key = key_str.slice(1)
                             val = ctx.get("vars", key)
                         }
-                        // A lone $var holding a function value passes
-                        // through intact rather than stringifying
-                        if (arg === key_str && val instanceof Lambda) {
+                        // A lone variable passes its value through with
+                        // its type intact (objects stay objects)
+                        if (arg === key_str) {
                             arg = val
                             break
                         }
-                        arg = arg.replace(key_str, val)
+                        // Function form so values containing $& and
+                        // friends are inserted verbatim
+                        arg = arg.replace(key_str, () => String(val))
                     }
                 }
             }
@@ -426,8 +448,8 @@ export function runPipeline(
 
     // Parse arguments and then execute
 
-    // Return literal value (number or string) if $val
-    if (cmd_token.val != null) {
+    // Return literal value (number, string, bool, null) if $val
+    if ("val" in cmd_token) {
         if (DEBUG) console.log("VAL: " + _inspect(cmd_args))
         parseArgs(inp, [cmd_token.val], (err: Error | null, parsed?: any[]) => {
             if (err) return cb(err)
@@ -799,6 +821,9 @@ function descendObj(
 function accessor(obj: any, key: string): any {
     if (key === ".") {
         return obj
+    } else if (key === "*") {
+        // Wildcard: all values of an object (or the items of an array)
+        return Array.isArray(obj) ? obj.slice() : Object.values(obj)
     } else {
         if (key.match(/^-?\d+/)) {
             let numKey = Number(key)

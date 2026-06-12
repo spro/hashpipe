@@ -5,6 +5,7 @@
 * [Arrays and objects](#arrays-and-objects)
 * [Variables](#variables)
 * [Pipelines](#pipelines)
+* [Statements and comments](#statements-and-comments)
 * [Sub-pipes](#sub-pipes)
 * [Expressions](#expressions)
 * [Functions](#functions)
@@ -29,9 +30,9 @@ objects](#arrays-and-objects), [variables](#variables) or [sub-pipes](#sub-pipes
 
 ## Literals
 
-Hashpipe supports a few basic types as literals: numbers, strings and booleans.
-They may be used as command arguments or alone (using them alone is actually a
-shortcut for the `val` command).
+Hashpipe supports a few basic types as literals: numbers, strings, booleans
+and `null`. They may be used as command arguments or alone (using them alone
+is actually a shortcut for the `val` command).
 
 ```coffee
 #| 4.20
@@ -42,6 +43,9 @@ shortcut for the `val` command).
 
 #| true
 true
+
+#| null
+null
 
 #| val 5.25
 5.25
@@ -125,6 +129,26 @@ The special variable `$!` references the output of the last command.
 'There were 3 letters in there.'
 ```
 
+Braces mark where a variable name ends, so values can be spliced into
+longer words:
+
+```coffee
+#| $file = 'data.json'
+
+#| echo ${file}_v2
+'data.json_v2'
+```
+
+An argument that is exactly one variable keeps its value's type — objects
+stay objects instead of stringifying:
+
+```coffee
+#| $u = {name: "Al"}
+
+#| list $u
+[ { name: 'Al' } ]
+```
+
 ## Pipelines
 
 A command's output may be piped to another to be used as input with the `|`
@@ -163,6 +187,41 @@ failed, receiving the error as input, and is skipped entirely on success.
 
 #| no-such-command |? val fallback | upper
 'FALLBACK'
+```
+
+## Statements and comments
+
+Statements are separated by `;` or by newlines, so script files read
+naturally. A pipeline can still span lines by breaking at a pipe (leading or
+trailing):
+
+```coffee
+$x = 2 ; $y = 3
+echo hello
+  | upper
+'HELLO'
+```
+
+A `#` at the start of a statement begins a comment, running to the end of
+the line (or to the next `;`). A `#` inside a word stays literal, so URL
+fragments are unaffected:
+
+```coffee
+# this whole line is a comment
+http.get http://example.com/page#section
+```
+
+Any metacharacter can be escaped with a backslash:
+
+```coffee
+#| echo a \| b
+'a | b'
+
+#| echo 100\% \#1 \$cash
+'100% #1 $cash'
+
+#| list a\ b
+[ 'a b' ]
 ```
 
 ## Sub-pipes
@@ -433,6 +492,22 @@ freely:
 
 #| [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name:0.0
 'F'
+```
+
+### Quoted keys and wildcards
+
+Quote a key to reach names that bare words can't express, and use `*` to
+take all values of an object (chainable like any accessor):
+
+```coffee
+#| {"content type": "json"} @ "content type"
+'json'
+
+#| {a: 1, b: 2} @ *
+[ 1, 2 ]
+
+#| {a: {n: 1}, b: {n: 2}} @ *:n
+[ 1, 2 ]
 ```
 
 ### Multi-get with `[expression, ...]`

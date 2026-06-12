@@ -224,8 +224,8 @@ describe("Hashpipe Pipeline Tests", () => {
         showParsed(cmd)
         const result = await execScript(cmd)
         console.log("\nResult:\n", _inspect(result))
-        // Results are strings from the parallel pipe operations
-        const expected = Array.from({ length: 25 }, (_, i) => String(i))
+        // A lone $! keeps its type, so the numbers survive the round trip
+        const expected = Array.from({ length: 25 }, (_, i) => i)
         expect(result).toEqual(expected)
     })
 })
