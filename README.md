@@ -35,7 +35,7 @@ Bash-like command pipelines
   'John Mitchell' ]
 ```
 
-[Parallel and series pipes](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md#at-expressions) to map commands over arrays
+[Parallel and series pipes](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md#pipelines) to map commands over arrays
 
 ```coffee
 #| [1, 3, 4, 12] || * 5
@@ -92,3 +92,10 @@ Try one of the Hashpipe walkthroughs to see it in action:
 
 * [What's the weather like at Google?](https://github.com/spro/hashpipe/blob/master/docs/walkthroughs/GoogleWeather.md)
 * [Exploring Hacker News with Hashpipe](https://github.com/spro/hashpipe/blob/master/docs/walkthroughs/HN.md)
+
+## Extending hashpipe
+
+Commands are plain functions with a `(inp, args, ctx, cb)` signature, and
+modules are TypeScript files that export them. The
+[module-author guide](https://github.com/spro/hashpipe/blob/master/docs/Modules.md)
+covers the contract, namespacing, async commands, and accepting lambdas.

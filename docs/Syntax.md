@@ -9,6 +9,7 @@
 * [Sub-pipes](#sub-pipes)
 * [Expressions](#expressions)
 * [Functions](#functions)
+* [Aliases and modules](#aliases-and-modules)
 * [At-expressions](#at-expressions)
 
 ## Commands
@@ -439,6 +440,33 @@ single pipeline (it stops at `;`), call-site arguments are appended to the
 body's first command, and the body runs in the caller's scope. Use `def` when
 you want named parameters or a multi-pipeline body.
 
+## Aliases and modules
+
+`alias name = pipeline` creates a shortcut; `aliases` lists what's defined:
+
+```coffee
+#| alias sevens = * 7
+
+#| 6 | sevens
+42
+
+#| aliases
+{ sevens: '* 7' }
+```
+
+`use` loads a module, registering its commands under the module's
+namespace (`http.get`, `files.cat`, ...). The default REPL preloads `http`,
+`html`, `files`, and `keywords`.
+
+```coffee
+#| use replace
+
+#| echo hello world | replace world there
+'hello there'
+```
+
+See [Modules.md](Modules.md) for writing your own modules.
+
 ## At-expressions
 
 An `@`-expression is a special suffix used to traverse and transform objects and arrays. They may occur at the end of any command. 
@@ -472,6 +500,13 @@ For simplicity, the leading `.` is implied.
 'Fred'
 ```
 
+Negative indices count from the end, Python-style:
+
+```coffee
+#| ['a', 'b', 'c'] @ -1
+'c'
+```
+
 ### Mapping with `:accessor`
 
 To access one key of an array of objects, we can use the `:` or *map* operator.
@@ -492,6 +527,14 @@ freely:
 
 #| [{name: "Fred"}, {name: "Paul"}, {name: "Sam"}] @ :name:0.0
 'F'
+```
+
+Doubling the colon maps one level deeper — `::key` maps over a list of
+lists:
+
+```coffee
+#| [[{n: 1}], [{n: 2}]] @ ::n
+[ [ 1 ], [ 2 ] ]
 ```
 
 ### Quoted keys and wildcards

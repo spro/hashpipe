@@ -135,7 +135,7 @@
     <li><a href="#f2">Pipe-operator registry + error pipe <code>|?</code></a> <span class="effort s">SHIPPED 2026-06-12</span></li>
     <li><a href="#f3">Command lookup order (builtins last)</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
     <li><a href="#f5">Grammar paper cuts (comments, escapes, quoted keys, <code>${var}</code>)</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
-    <li><a href="#f6">Docs: module-author guide + Syntax.md gaps</a> <span class="effort s">SMALL</span></li>
+    <li><a href="#f6">Docs: module-author guide + Syntax.md gaps</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
     <li><a href="#f4">User module search path</a> <span class="effort m">DEPRIORITIZED</span></li>
   </ol>
   <p style="margin-bottom:0"><a href="#roadmap"><strong>→ Sequencing roadmap</strong></a></p>
@@ -358,14 +358,14 @@ null
 
 <div class="panel risk">
 <h3>Risk</h3>
-<p>Behavioral: a module that accidentally exports <code>get</code>-style generic names now wins over builtins. That's the <em>point</em>, but call it out in the changelog and have <code>use</code> print shadow warnings (pairs with #4's collision reporting).</p>
+<p>Behavioral: a module that accidentally exports <code>get</code>-style generic names now wins over builtins. That's the <em>point</em>, but call it out in the changelog and have <code>use</code> print shadow warnings (pairs with the collision reporting in the deprioritized module-path finding (#6)).</p>
 </div>
 
 <!-- ============================================================ -->
 <h2 id="f5"><span class="num">4</span> Grammar paper cuts</h2>
 <p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b> (parseArgs) &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — tests in tests/grammar.test.ts, docs in Syntax.md (§ Statements and comments, § Variables, § At-expressions). All four landed, with newline-as-separator accepted globally as recommended: statements split on newlines (pipe continuations still span lines because <code>pipe_op</code> and at-expressions consume newlines), <code>#</code> comments at statement position, one generic escape rule (<code>\$</code> keeps its backslash for parseArgs), quoted keys + <code>*</code> wildcard in at-expressions, <code>${var}</code> splicing, typed lone-var pass-through, the <code>$&amp;</code> replace bug fix, a <code>null</code> literal, and the dead <code>bool</code> rule removed. Slices (<code>[0..3]</code>) deferred as planned.</p>
 
-<h3>5a — Comments</h3>
+<h3>4a — Comments</h3>
 <p><code>#</code> is in <code>ok_char</code> (URLs contain fragments), so comments must be position-aware, not lexical. Plan: introduce a statement-level rule — <code>comment = space "#" [^\n;]*</code> — allowed wherever a <code>pipeline</code> can appear in the <code>pipelines</code> list, and treat newline as a pipeline separator alongside <code>;</code> in file/<code>--run</code> mode. <code>#</code> mid-word stays a literal character.</p>
 <div class="ba">
   <div class="cell b">
@@ -387,9 +387,9 @@ http.get http://x.io/page#section
 <span class="comment">  newline separates pipelines like ';'</span></code></pre>
   </div>
 </div>
-<p><em>Decision needed:</em> newline-as-separator changes script semantics (currently newlines are whitespace) — gate it on <code>execFile</code> only, or accept globally? Recommend globally; multi-line single pipelines keep working via trailing-<code>|</code> continuation.</p>
+<p><em>Decision (resolved):</em> newline-as-separator was accepted <strong>globally</strong>, as recommended. Multi-line pipelines keep working via leading- or trailing-pipe continuation.</p>
 
-<h3>5b — Generic escaping</h3>
+<h3>4b — Generic escaping</h3>
 <p>Replace the enumerated escape rules (grammar.peg:72–75) with one generic rule (keep <code>\n</code> → newline in quoted literals). Every future metacharacter is automatically escapable.</p>
 <div class="ba">
   <div class="cell b">
@@ -419,7 +419,7 @@ escd_char = "\\" c:. { return c; }
 </div>
 <p>Test matrix: <code>\@ \( \) \$ \| \; \# \\</code> in word, single-quoted, and double-quoted positions.</p>
 
-<h3>5c — Quoted keys + wildcard in at-expressions</h3>
+<h3>4c — Quoted keys + wildcard in at-expressions</h3>
 <p><code>at_word</code> only matches <code>[a-zA-Z0-9_~/-]</code>, so JSON keys with spaces/dots are unreachable. Plan: <code>section = at_obj / at_array / at_quoted / at_word</code> where <code>at_quoted</code> reuses <code>quoted_literal</code> and yields the raw string. Add wildcard: <code>@ :*</code> / <code>@ .*</code> where <code>*</code> in <code>accessor()</code> means <code>Object.values(obj)</code>.</p>
 <div class="ba">
   <div class="cell b">
@@ -448,7 +448,7 @@ escd_char = "\\" c:. { return c; }
 </div>
 <p>Defer slices (<code>[0..3]</code> range syntax) — nice-to-have, doesn't block anything.</p>
 
-<h3>5d — <code>${var}</code> + typed interpolation + replace bug</h3>
+<h3>4d — <code>${var}</code> + typed interpolation + replace bug</h3>
 <div class="ba">
   <div class="cell b">
     <div class="ba-label before">Before — today</div>
@@ -484,11 +484,11 @@ escd_char = "\\" c:. { return c; }
 
 <!-- ============================================================ -->
 <h2 id="f6"><span class="num">5</span> Docs: module-author guide + Syntax.md gaps</h2>
-<p class="meta">Touches: <b>docs/Modules.md</b> (new), <b>docs/Syntax.md</b>, <b>README.md</b>, <b>CLAUDE.md</b> &nbsp;·&nbsp; Effort: <span class="effort s">SMALL</span></p>
+<p class="meta">Touches: <b>docs/Modules.md</b> (new), <b>docs/Syntax.md</b>, <b>README.md</b>, <b>CLAUDE.md</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — Modules.md covers the command contract, namespacing, async commands, wrap helpers, and lambda-accepting commands (using the real replace.ts as the minimal example). Syntax.md gained aliases/use, map depth <code>::</code>, and negative indexing (statements/escapes/lambdas/<code>|?</code> had already landed with their features). README got the Extending section and the fixed pipes anchor. CLAUDE.md was rewritten for the completed TypeScript migration.</p>
 
 <h3>Plan</h3>
 <ol class="steps">
-  <li><strong>New <code>docs/Modules.md</code>:</strong> the <code>(inp, args, ctx, cb)</code> contract; <code>wrapone</code>/<code>wraponeSync</code>/<code>wrapall</code> from helpers.ts; namespacing rules (default-export object vs named exports, <code>ns.fn</code> + bare-<code>ns</code> shorthand when <code>exportName === namespace</code>); scope/ctx semantics; full worked example (a small <code>weather</code> module) from file → <code>use</code> → call. Update with the #4 search path once it lands.</li>
+  <li><strong>New <code>docs/Modules.md</code>:</strong> the <code>(inp, args, ctx, cb)</code> contract; <code>wrapone</code>/<code>wraponeSync</code>/<code>wrapall</code> from helpers.ts; namespacing rules (default-export object vs named exports, <code>ns.fn</code> + bare-<code>ns</code> shorthand when <code>exportName === namespace</code>); scope/ctx semantics; full worked example (a small <code>weather</code> module) from file → <code>use</code> → call. Update with the #6 search path if/when it lands (currently deprioritized).</li>
   <li><strong>Syntax.md additions:</strong> <code>;</code> multi-pipelines, <code>alias</code>/<code>aliases</code>, <code>use</code>, escaping rules, map depth (<code>::</code>), negative indexing, <code>$!</code> in at-expression sub-pipes — then new sections as #1/#2 land (lambdas, <code>def</code>, <code>|?</code>).</li>
   <li><strong>README:</strong> add a "Extending hashpipe" section linking Modules.md; fix the Syntax.md anchor for parallel/series pipes (currently points at <code>#at-expressions</code>).</li>
   <li><strong>CLAUDE.md refresh:</strong> it still describes root-level <code>*.coffee</code>, <code>modules/</code>, and <code>lib-coffee/</code> — none exist anymore. Update directory map to <code>src/builtins/</code> + <code>src/modules/</code>, drop the coffee build/test instructions if the migration is declared done.</li>
@@ -538,33 +538,33 @@ escd_char = "\\" c:. { return c; }
   </tr>
   <tr>
     <td class="phase">4 — sugar</td>
-    <td>5a comments · 5b generic escapes · 5c quoted keys/wildcard · 5d <code>${var}</code>/typed interpolation + replace-bug fix</td>
+    <td>4a comments · 4b generic escapes · 4c quoted keys/wildcard · 4d <code>${var}</code>/typed interpolation + replace-bug fix</td>
     <td><span class="effort s">SHIPPED 2026-06-12</span> — all four sub-items in one pass; newline-as-separator accepted globally.</td>
   </tr>
   <tr>
     <td class="phase">5 — docs</td>
-    <td>#6 module-author guide + Syntax.md gaps · CLAUDE.md refresh</td>
-    <td>Syntax.md has tracked each shipped feature; the module-author guide remains.</td>
+    <td>#5 module-author guide + Syntax.md gaps · CLAUDE.md refresh</td>
+    <td><span class="effort s">SHIPPED 2026-06-12</span> — Modules.md, Syntax.md gap-fill, README Extending section, CLAUDE.md rewrite.</td>
   </tr>
   <tr>
     <td class="phase">6 — module paths</td>
-    <td>#4 + Modules.md update</td>
+    <td>#6 + Modules.md update</td>
     <td><span class="effort m">DEPRIORITIZED</span> — needs more design thinking; moved to last (was phase 3).</td>
   </tr>
 </table>
 
 <div class="panel decision">
-<h3>Open decisions before Phase 1</h3>
+<h3>Decisions — all resolved</h3>
 <ul>
-  <li>Lambda literal syntax: <code>{| ... |}</code> (proposed) vs alternatives.</li>
-  <li>Whether to also add <code>def name params... = pipelines</code> grammar sugar alongside <code>def name {|...|}</code> (additive, can wait).</li>
-  <li>Newline as pipeline separator (5a): everywhere, or file-mode only?</li>
-  <li>Deprecation horizon for raw-text <code>alias</code> grammar sugar.</li>
+  <li>Lambda literal syntax: <code>{| body }</code> / <code>{ $n | body }</code> (see finding 1's Design for the iterations).</li>
+  <li><code>def name params... = pipelines</code> brace-free sugar: deferred pending usage feedback.</li>
+  <li>Newline as statement separator (4a): accepted everywhere, not just file mode.</li>
+  <li><code>alias</code>: kept indefinitely as the lighter cousin of <code>def</code>; no deprecation.</li>
 </ul>
 </div>
 
 <footer>
-  Source review: grammar.peg, docs/Syntax.md, README.md, src/pipeline.ts, src/helpers.ts, src/builtins/{core,environment,collections}.ts · hashpipe extensibility review, 2026-06-11 · rev 2
+  Source review: grammar.peg, docs/Syntax.md, README.md, src/pipeline.ts, src/helpers.ts, src/builtins/{core,environment,collections}.ts · hashpipe extensibility review, 2026-06-11 · rev 3, updated 2026-06-12 as findings shipped
 </footer>
 
 </div>
