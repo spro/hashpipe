@@ -46,8 +46,10 @@ export declare class Context extends Scope {
 }
 export declare class Pipeline extends Scope {
     private lastRegisteredFns;
+    private lastShadowedFns;
     use(fns: string | Record<string, HashpipeFunction>): this;
     getLastRegisteredFns(): string[];
+    getLastShadowedFns(): string[];
     exec(script: string, inp?: any, ctx?: any, cb?: Callback): Scope;
     execFile(script_filename: string, inp: any, ctx: any, cb: Callback): void;
 }

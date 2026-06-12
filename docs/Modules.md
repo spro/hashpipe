@@ -135,11 +135,33 @@ export const twice: HashpipeFunction = (inp, args, ctx, cb) => {
 
 ## Where modules live
 
-`use <name>` currently resolves only against hashpipe's own
-`src/modules/` (compiled to `lib/modules/`), so adding a module means
-adding a file there and running `npm run build`. A user-level search path
-(`~/.hashpipe/modules/`, `HASHPIPE_PATH`, npm packages) is planned but not
-yet built — see finding 6 in the extensibility plan.
+`use <name>` resolves through a search path, first hit wins:
+
+1. **Explicit paths** — `use ./my-module.js`, `use /abs/path/mod`, or
+   `use ~/mods/thing`, resolved against the working directory
+2. **`HASHPIPE_PATH`** — each colon-separated directory, in order
+3. **`~/.hashpipe/modules/`** — your personal module directory
+4. **Bundled modules** — hashpipe's own `lib/modules/` (http, html,
+   files, ...)
+5. **npm packages named `hashpipe-<name>`** — `use llm` finds an
+   installed `hashpipe-llm`, resolved from the working directory so a
+   local `node_modules` works. Generic package names are deliberately
+   not tried.
+
+A miss lists everything that was attempted:
+
+```coffee
+#| use nope
+[ERROR] ... Module 'nope' not found. Tried: ~/.hashpipe/modules/nope,
+<bundled>/modules/nope, hashpipe-nope
+```
+
+When a load shadows existing commands, `use` says so:
+
+```coffee
+#| use upper      # a module exporting its own upper
+'Using: upper (shadowing: upper)'
+```
 
 In the [browser repl](https://spro.github.io/hashpipe/), node-only modules
 aren't available; `http` is replaced by a fetch-backed equivalent that is

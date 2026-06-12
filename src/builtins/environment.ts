@@ -45,19 +45,28 @@ const environmentBuiltins: BuiltinMap = {
     },
     use: (inp, args, ctx, cb) => {
         const imported: string[] = []
+        const shadowed: string[] = []
         const topScope = ctx.topScope()
         const pipeline = topScope as Pipeline & {
             getLastRegisteredFns?: () => string[]
+            getLastShadowedFns?: () => string[]
         }
         for (const entry of args) {
             pipeline.use(entry)
             if (typeof pipeline.getLastRegisteredFns === "function") {
                 imported.push(...pipeline.getLastRegisteredFns())
             }
+            if (typeof pipeline.getLastShadowedFns === "function") {
+                shadowed.push(...pipeline.getLastShadowedFns())
+            }
         }
         const unique = [...new Set(imported)]
         const messageItems = unique.length ? unique : args
-        cb(null, "Using: " + messageItems.join(", "))
+        let message = "Using: " + messageItems.join(", ")
+        if (shadowed.length) {
+            message += " (shadowing: " + [...new Set(shadowed)].join(", ") + ")"
+        }
+        cb(null, message)
     },
     def: (inp, args, ctx, cb) => {
         const name = args[0]

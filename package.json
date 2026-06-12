@@ -20,7 +20,7 @@
     "build-ts": "tsc",
     "build-grammar": "pegjs -o src/grammar.js grammar.peg && cp src/grammar.js lib/grammar.js",
     "build": "npm run build-grammar && npm run build-ts",
-    "build-web": "esbuild src/web/index.ts --bundle --minify --format=iife --global-name=Hashpipe --alias:util=./src/web/shims/util.ts --alias:fs=./src/web/shims/fs.ts --outfile=web/hashpipe.js",
+    "build-web": "esbuild src/web/index.ts --bundle --minify --format=iife --global-name=Hashpipe --alias:util=./src/web/shims/util.ts --alias:fs=./src/web/shims/fs.ts --external:path --external:os --external:module --outfile=web/hashpipe.js",
     "repl": "node lib/repl.js",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -4,6 +4,7 @@ import * as async from "async"
 import * as fs from "fs"
 import { inspect as utilInspect } from "util"
 import { cloneShallow, isFunction, isObject, isString } from "./utils/lang"
+import { loadModule } from "./module-loader"
 import { Callback, HashpipeFunction, Lambda, setLambdaRunner } from "./helpers"
 
 const DEBUG = false
@@ -119,8 +120,15 @@ export class Context extends Scope {}
 
 export class Pipeline extends Scope {
     private lastRegisteredFns: string[] = []
+    private lastShadowedFns: string[] = []
 
     use(fns: string | Record<string, HashpipeFunction>): this {
+        const markShadow = (name: string) => {
+            if (this.get("fns", name) != null || builtins[name] != null) {
+                shadowed.push(name)
+            }
+        }
+
         const registerNamespace = (
             namespace: string,
             funcs: Record<string, any>,
@@ -131,9 +139,11 @@ export class Pipeline extends Scope {
                 }
 
                 const commandName = `${namespace}.${exportName}`
+                markShadow(commandName)
                 this.set("fns", commandName, fn as HashpipeFunction)
 
                 if (exportName === namespace) {
+                    markShadow(namespace)
                     this.set("fns", namespace, fn as HashpipeFunction)
                     registered.push(namespace)
                 } else {
@@ -150,16 +160,12 @@ export class Pipeline extends Scope {
         }
 
         let registered: string[] = []
+        const shadowed: string[] = []
 
         if (isString(fns)) {
             const request = fns
-            let moduleName = request
-            if (moduleName.match(/^\w/)) {
-                moduleName = "./modules/" + moduleName
-            }
-
             const namespace = normalizeNamespace(request)
-            const moduleExports = require(moduleName)
+            const moduleExports = loadModule(request).exports
             const exportEntries = Object.entries(moduleExports)
 
             if (
@@ -176,16 +182,22 @@ export class Pipeline extends Scope {
             }
         } else if (isObject(fns)) {
             for (const [k, v] of Object.entries(fns)) {
+                markShadow(k)
                 this.set("fns", k, v)
                 registered.push(k)
             }
         }
         this.lastRegisteredFns = registered
+        this.lastShadowedFns = shadowed
         return this
     }
 
     getLastRegisteredFns(): string[] {
         return this.lastRegisteredFns.slice()
+    }
+
+    getLastShadowedFns(): string[] {
+        return this.lastShadowedFns.slice()
     }
 
     // Execute a pipeline given a command string, input object,

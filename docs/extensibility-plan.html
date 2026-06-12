@@ -136,7 +136,7 @@
     <li><a href="#f3">Command lookup order (builtins last)</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
     <li><a href="#f5">Grammar paper cuts (comments, escapes, quoted keys, <code>${var}</code>)</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
     <li><a href="#f6">Docs: module-author guide + Syntax.md gaps</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
-    <li><a href="#f4">User module search path</a> <span class="effort m">DEPRIORITIZED</span></li>
+    <li><a href="#f4">User module search path</a> <span class="effort s">SHIPPED 2026-06-12</span></li>
   </ol>
   <p style="margin-bottom:0"><a href="#roadmap"><strong>→ Sequencing roadmap</strong></a></p>
 </div>
@@ -496,7 +496,7 @@ escd_char = "\\" c:. { return c; }
 
 <!-- ============================================================ -->
 <h2 id="f4"><span class="num">6</span> User module search path</h2>
-<p class="meta">Touches: <b>src/pipeline.ts</b> (Pipeline.use) &nbsp;·&nbsp; Effort: <span class="effort s">SMALL</span> &nbsp;&middot;&nbsp; <span class="effort m">DEPRIORITIZED 2026-06-12</span> — needs more design thinking (per Sean); revisit after the higher-priority items.</p>
+<p class="meta">Touches: <b>src/module-loader.ts</b> (new), <b>src/pipeline.ts</b> (Pipeline.use), <b>src/builtins/environment.ts</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — tests in tests/modules.test.ts, docs in Modules.md § Where modules live. Shipped with one design change from review (per Sean): the npm tier tries <em>only</em> <code>hashpipe-&lt;name&gt;</code>, never the generic package name. Resolution order otherwise as planned (explicit paths → HASHPIPE_PATH → ~/.hashpipe/modules → bundled → npm), a total miss lists every attempted location, and <code>use</code> reports "(shadowing: ...)" when a load overwrites existing commands.</p>
 
 <h3>Problem</h3>
 <p><code>use</code> resolves bare names to <code>./modules/</code> inside the installed package (pipeline.ts:139–143). Users can't add a module without publishing it into hashpipe's own <code>lib/</code>.</p>
@@ -549,7 +549,7 @@ escd_char = "\\" c:. { return c; }
   <tr>
     <td class="phase">6 — module paths</td>
     <td>#6 + Modules.md update</td>
-    <td><span class="effort m">DEPRIORITIZED</span> — needs more design thinking; moved to last (was phase 3).</td>
+    <td><span class="effort s">SHIPPED 2026-06-12</span> — un-parked after review; npm tier restricted to hashpipe-prefixed packages.</td>
   </tr>
 </table>
 
