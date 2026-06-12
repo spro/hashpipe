@@ -154,6 +154,12 @@
         }
     })
 
+    // Backstop: never leave the input disabled if an error escapes a command
+    window.addEventListener("error", function () {
+        input.disabled = false
+        input.focus()
+    })
+
     terminal.addEventListener("click", function () {
         if (!window.getSelection().toString()) input.focus()
     })
