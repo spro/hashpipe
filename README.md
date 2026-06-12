@@ -2,6 +2,8 @@
 
 Hashpipe is an experimental JSON-based shell. Imagine that Bash was designed for manipulating web APIs instead of a filesystem.
 
+**[Try it in your browser →](https://spro.github.io/hashpipe/)**
+
 Featuring:
 
 * JSON-typed input & output (strings, numbers, objects, and arrays)
