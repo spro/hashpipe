@@ -99,6 +99,17 @@ describe("module search path", () => {
         expect(result).toEqual("pong")
     })
 
+    test("explicit paths to hashpipe-prefixed packages drop the prefix", async () => {
+        const pkgDir = path.join(fixtureDir, "hashpipe-waver")
+        fs.mkdirSync(pkgDir, { recursive: true })
+        fs.writeFileSync(
+            path.join(pkgDir, "index.js"),
+            `exports.wave = (inp, args, ctx, cb) => cb(null, "wave!")\n`,
+        )
+        const result = await execFresh(`use ${pkgDir} ; waver.wave`)
+        expect(result).toEqual("wave!")
+    })
+
     test("generic npm package names are not tried", async () => {
         // `async` is a real dependency in node_modules; only
         // hashpipe-async may be attempted, so this must miss
