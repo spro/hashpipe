@@ -33,7 +33,7 @@
   <code class="example">get spro.github.io/hashpipe/about.json</code>
   <code class="example">[1, 2, 3, 4] || * 5</code>
   <code class="example">echo john jacob jingleheimer | split ' ' || upper</code>
-  <code class="example">def human-years { $n | $n * 7 } ; human-years 6</code>
+  <code class="example">def dog-years { $n | $n * 7 } ; dog-years 6</code>
   <code class="example">get api.github.com/repos/spro/hashpipe @ {name, stars: stargazers_count, language}</code>
   <code class="example">[{name: 'sparky', age: 58}, {name: 'woofer', age: 6}] | filter {| $(@ age) > 30 } @ :name</code>
 </footer>
