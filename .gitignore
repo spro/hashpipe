@@ -2,3 +2,5 @@ node_modules/
 src-coffee/
 lib-coffee/
 SCRATCH.md
+.playwright-mcp/
+docs/walkthroughs/Untitled.md
