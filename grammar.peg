@@ -120,7 +120,7 @@ cmd = obj_cmd / list_cmd /
 // Infix expressions: $n * 7, 2 + 3 * 4, $(@ age) > 30
 // Operands are values (numbers, strings, $vars, sub-pipes, parens) — never
 // bare command words — so prefix commands like `* 7` and words like
-// `human-years` are unaffected.
+// `dog-years` are unaffected.
 
 space1 = [ \n\t\r]+
 comp_op = "<=" / ">=" / "==" / "!=" / "<" / ">"

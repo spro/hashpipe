@@ -107,14 +107,14 @@ describe("filter", () => {
 
 describe("def", () => {
     test("def with a named input", async () => {
-        const cmd = `def human-years { $n | $n | * 7 } ; human-years 6`
+        const cmd = `def dog-years { $n | $n | * 7 } ; dog-years 6`
         showParsed(cmd)
         const result = await execScript(cmd)
         expect(result).toEqual(42)
     })
 
     test("def with a hugging named input", async () => {
-        const cmd = `def human-years {$n| $n | * 7 } ; human-years 4`
+        const cmd = `def dog-years {$n| $n | * 7 } ; dog-years 4`
         const result = await execScript(cmd)
         expect(result).toEqual(28)
     })
@@ -239,13 +239,13 @@ describe("alias rework", () => {
 
 describe("named input binding", () => {
     test("name binds the argument when given", async () => {
-        const cmd = `def human-years { $n | $n * 7 } ; human-years 6`
+        const cmd = `def dog-years { $n | $n * 7 } ; dog-years 6`
         const result = await execScript(cmd)
         expect(result).toEqual(42)
     })
 
     test("name binds the piped input when no argument is given", async () => {
-        const cmd = `def human-years { $n | $n * 7 } ; 6 | human-years`
+        const cmd = `def dog-years { $n | $n * 7 } ; 6 | dog-years`
         showParsed(cmd)
         const result = await execScript(cmd)
         expect(result).toEqual(42)

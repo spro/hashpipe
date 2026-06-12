@@ -143,7 +143,7 @@
 
 <!-- ============================================================ -->
 <h2 id="f1"><span class="num">1</span> First-class functions: lambdas + <code>def</code> + alias rework</h2>
-<p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b>, <b>src/builtins/core.ts</b>, <b>src/builtins/collections.ts</b>, <b>src/builtins/environment.ts</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-11</span> — tests in tests/lambda.test.ts (42 cases), docs in Syntax.md § Expressions + § Functions. Shipped with three syntax revisions over this plan: lambdas close with <code>}</code> not <code>|}</code>; infix operators landed alongside (<code>+ - * / %</code> and <code>&lt; &gt; &lt;= &gt;= == !=</code> with precedence and parens), giving filter real comparison predicates; and Ruby-style params were replaced by a named input before the first pipe (<code>def human-years { $n | $n * 7 }</code>) — the name binds the first argument if given, else the piped input, so <code>human-years 6</code> and <code>6 | human-years</code> both work, and the required <code>$</code> sigil keeps bare-word bodies like <code>{| trim | upper }</code> unambiguous. Notes: sortBy/groupBy accept lambdas only (strings stay key names); the legacy JS-string filter form is retained without a deprecation warning for now.</p>
+<p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b>, <b>src/builtins/core.ts</b>, <b>src/builtins/collections.ts</b>, <b>src/builtins/environment.ts</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-11</span> — tests in tests/lambda.test.ts (42 cases), docs in Syntax.md § Expressions + § Functions. Shipped with three syntax revisions over this plan: lambdas close with <code>}</code> not <code>|}</code>; infix operators landed alongside (<code>+ - * / %</code> and <code>&lt; &gt; &lt;= &gt;= == !=</code> with precedence and parens), giving filter real comparison predicates; and Ruby-style params were replaced by a named input before the first pipe (<code>def dog-years { $n | $n * 7 }</code>) — the name binds the first argument if given, else the piped input, so <code>dog-years 6</code> and <code>6 | dog-years</code> both work, and the required <code>$</code> sigil keeps bare-word bodies like <code>{| trim | upper }</code> unambiguous. Notes: sortBy/groupBy accept lambdas only (strings stay key names); the legacy JS-string filter form is retained without a deprecation warning for now.</p>
 
 <h3>Problem</h3>
 <p>Every argument is evaluated before the command runs (<code>$()</code> sub-pipes are call-by-value), so no command can receive an unevaluated pipeline. Control flow can't be written in the language: <code>if</code> evaluates both branches, and <code>filter</code> escapes to raw JS via <code>new Function</code> (collections.ts:233–234). The only abstraction mechanism, <code>alias</code>, is a grammar special case — the body is captured as raw text <code>[^;]+</code> (grammar.peg:150) so it can't contain <code>;</code>, <code>runPipeline</code> carries a matching magic-string check (pipeline.ts:278), and <code>through()</code> appends call-site args only to the first command, so aliases are effectively zero-arg. The only path to a parameterized command today is a TypeScript module.</p>
@@ -203,8 +203,8 @@
   <div class="cell a">
     <div class="ba-label after">After — def</div>
     <pre><code><span class="comment"># real named parameters:</span>
-#| def human-years {|n| $n | * 7 |}
-#| human-years 6
+#| def dog-years {|n| $n | * 7 |}
+#| dog-years 6
 42
 
 <span class="comment"># multi-pipeline bodies are fine:</span>

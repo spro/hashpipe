@@ -261,12 +261,12 @@ brace and the first pipe. The name binds the first command argument if one
 is given, and the piped input otherwise — so both call styles work:
 
 ```coffee
-#| def human-years { $n | $n * 7 }
+#| def dog-years { $n | $n * 7 }
 
-#| human-years 6
+#| dog-years 6
 42
 
-#| 6 | human-years
+#| 6 | dog-years
 42
 ```
 
@@ -301,9 +301,9 @@ command does, including as bare-name references passed to higher-order
 commands.
 
 ```coffee
-#| def human-years { $n | $n * 7 }
+#| def dog-years { $n | $n * 7 }
 
-#| human-years 6
+#| dog-years 6
 42
 
 #| def shout {| upper }

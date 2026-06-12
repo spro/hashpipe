@@ -64,11 +64,10 @@ Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md
 #| [1, 2, 3] | map {| * 2 }
 [ 2, 4, 6 ]
 
-#| def human-years { $n | $n * 7 }
-#| human-years 6
+#| def dog-years { $n | $n * 7 }
+#| dog-years 6
 42
 
-#| def dog-years {| * 7}
 #| 6 | dog-years
 42
 ```
