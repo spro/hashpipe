@@ -4,7 +4,7 @@ import * as async from "async"
 import * as fs from "fs"
 import { inspect as utilInspect } from "util"
 import { cloneShallow, isFunction, isObject, isString } from "./utils/lang"
-import { Callback, HashpipeFunction } from "./helpers"
+import { Callback, HashpipeFunction, Lambda, setLambdaRunner } from "./helpers"
 
 const DEBUG = false
 
@@ -25,6 +25,18 @@ export interface CommandToken {
     cmd?: any[]
     at?: AtExpression[]
     type?: string
+    val?: any
+    var?: string
+    sub?: any[]
+    expr?: ExprNode
+}
+
+// A node in an infix expression tree: either a binary op or an operand
+// (literal value, variable reference, or sub-pipe)
+export interface ExprNode {
+    op?: string
+    left?: ExprNode
+    right?: ExprNode
     val?: any
     var?: string
     sub?: any[]
@@ -76,9 +88,12 @@ export class Scope {
     }
 
     // Set an alias on the highest ranking scope
-    alias(a: string, s: string): void {
+    alias(a: string, s: string | Lambda): void {
         if (this.parent != null) {
             this.parent.alias(a, s)
+        } else if (s instanceof Lambda) {
+            this.set("fns", a, aliasFn(s))
+            this.set("aliases", a, s.src ?? String(s))
         } else {
             this.set("fns", a, through(s))
             this.set("aliases", a, s)
@@ -275,13 +290,23 @@ export function runPipeline(
             console.log(":::> " + _inspect(args))
         }
 
-        if (cmd_args[0] === "alias") {
-            return cb(null, args)
-        }
-
         const replaceArg = (arg: any, _cb: Callback) => {
             if (isObject(arg)) {
-                if (arg.sub != null) {
+                if (arg instanceof Lambda) {
+                    return _cb(null, arg)
+                } else if (arg.fn != null) {
+                    // Lambda token from the grammar: capture the current
+                    // scope instead of evaluating the body
+                    return _cb(
+                        null,
+                        new Lambda(
+                            arg.fn as any[],
+                            (arg.params as string[]) || [],
+                            ctx,
+                            arg.src as string | undefined,
+                        ),
+                    )
+                } else if (arg.sub != null) {
                     return runPipelines(arg.sub as any[], inp, ctx, _cb)
                 } else if (arg.quoted != null) {
                     return parseArgs(
@@ -313,6 +338,12 @@ export function runPipeline(
                         } else {
                             const key = key_str.slice(1)
                             val = ctx.get("vars", key)
+                        }
+                        // A lone $var holding a function value passes
+                        // through intact rather than stringifying
+                        if (arg === key_str && val instanceof Lambda) {
+                            arg = val
+                            break
                         }
                         arg = arg.replace(key_str, val)
                     }
@@ -364,17 +395,24 @@ export function runPipeline(
         }
     }
 
+    // Run this stage (command or infix expression) against a single input
+    const runStage = (_inp: any, _cb: Callback) => {
+        if (cmd_token.expr != null) {
+            evalExpr(cmd_token.expr, _inp, ctx, _cb)
+        } else {
+            parseArgs(_inp, cmd_args, (err: Error | null, args?: any[]) => {
+                doCmd(args!, _inp, ctx, _cb)
+            })
+        }
+    }
+
     // Parse arguments and then execute
 
     // Parallel if ppiped
     if (cmd_type === "ppipe") {
         if (DEBUG) console.log("PPIPE: " + _inspect(cmd_args))
         const tasks = inp.map((_inp: any) => {
-            return (_cb: Callback) => {
-                parseArgs(_inp, cmd_args, (err: Error | null, args?: any[]) => {
-                    doCmd(args!, _inp, ctx, _cb)
-                })
-            }
+            return (_cb: Callback) => runStage(_inp, _cb)
         })
         async.parallel(tasks, cb)
     }
@@ -382,11 +420,7 @@ export function runPipeline(
     else if (cmd_type === "spipe") {
         if (DEBUG) console.log("SPIPE: " + _inspect(cmd_args))
         const tasks = inp.map((_inp: any) => {
-            return (_cb: Callback) => {
-                parseArgs(_inp, cmd_args, (err: Error | null, args?: any[]) => {
-                    doCmd(args!, _inp, ctx, _cb)
-                })
-            }
+            return (_cb: Callback) => runStage(_inp, _cb)
         })
         async.series(tasks, cb)
     }
@@ -413,9 +447,67 @@ export function runPipeline(
     // Just execute if single piped
     else {
         if (DEBUG) console.log("PIPE: " + _inspect(cmd_args))
-        parseArgs(inp, cmd_args, (err: Error | null, args?: any[]) => {
-            doCmd(args!, inp, ctx, cb)
+        runStage(inp, cb)
+    }
+}
+
+// Evaluate an infix expression tree: resolve operands (literals, variables,
+// sub-pipes) against the current input and scope, then apply operators
+
+function evalExpr(node: ExprNode, inp: any, ctx: Scope, cb: Callback): void {
+    if (node.op != null) {
+        evalExpr(node.left!, inp, ctx, (err: any, left?: any) => {
+            if (err) return cb(err)
+            evalExpr(node.right!, inp, ctx, (err: any, right?: any) => {
+                if (err) return cb(err)
+                cb(null, applyOp(node.op!, left, right))
+            })
         })
+    } else if (node.sub != null) {
+        runPipelines(node.sub, inp, ctx, cb)
+    } else if (node.var != null) {
+        if (node.var === "$!") {
+            cb(null, inp)
+        } else {
+            cb(null, ctx.get("vars", node.var.slice(1)))
+        }
+    } else if ("val" in node) {
+        cb(null, node.val)
+    } else {
+        cb(`Bad expression operand: ${_inspect(node)}`)
+    }
+}
+
+function applyOp(op: string, a: any, b: any): any {
+    const num = (v: any) => Number(v) || 0
+    switch (op) {
+        case "+":
+            return num(a) + num(b)
+        case "-":
+            return num(a) - num(b)
+        case "*":
+            return num(a) * num(b)
+        case "/":
+            return num(a) / num(b)
+        case "%":
+            return num(a) % num(b)
+        case "==":
+            return a === b || String(a) === String(b)
+        case "!=":
+            return !(a === b || String(a) === String(b))
+        default: {
+            // Ordered comparisons: numeric when both sides are numbers,
+            // string comparison otherwise
+            const an = Number(a)
+            const bn = Number(b)
+            const numeric = !isNaN(an) && !isNaN(bn)
+            const x = numeric ? an : String(a)
+            const y = numeric ? bn : String(b)
+            if (op === "<") return x < y
+            if (op === ">") return x > y
+            if (op === "<=") return x <= y
+            return x >= y
+        }
     }
 }
 
@@ -431,11 +523,18 @@ export function doCmd(_args: any[], inp: any, ctx: Scope, cb: Callback): void {
     }
     const args = cloneShallow(_args)
     const cmd = args.shift()
+    if (cmd instanceof Lambda) {
+        return cmd.call(inp, args, cb)
+    }
     let fn = builtins[cmd]
     if (fn) {
         fn(inp, args, ctx, cb)
     } else if ((fn = ctx.get("fns", cmd))) {
-        fn(inp, args, ctx, cb)
+        if (fn instanceof Lambda) {
+            fn.call(inp, args, cb)
+        } else {
+            fn(inp, args, ctx, cb)
+        }
     } else {
         cb(`No command ${cmd}. `)
     }
@@ -656,6 +755,25 @@ function through(cmd: string): HashpipeFunction {
         runPipeline(pipeline, inp, ctx, cb)
     }
 }
+
+// Token-based equivalent of `through` for aliases defined as lambdas:
+// call-site args are appended to the first command and the body runs in
+// the caller's scope, preserving classic alias semantics.
+function aliasFn(lam: Lambda): HashpipeFunction {
+    return (inp: any, args: any[], ctx: any, cb: Callback) => {
+        const pipelines = lam.tokens.slice()
+        const first = cloneShallow(pipelines[0])
+        if (first[0]?.cmd != null) {
+            first[0] = { ...first[0], cmd: [...first[0].cmd, ...args] }
+        }
+        pipelines[0] = first
+        runPipelines(pipelines, inp, ctx, cb)
+    }
+}
+
+// Lambda invocation runs pipelines but lives in helpers.ts to avoid a
+// circular import; inject the runner here.
+setLambdaRunner(runPipelines)
 
 // Read in an at expression
 export function at(

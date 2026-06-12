@@ -6,6 +6,7 @@ Featuring:
 
 * JSON-typed input & output (strings, numbers, objects, and arrays)
 * Alternative piping constructs (like the parallel pipe `||` and sequential pipe `|=`)
+* First-class functions (lambda literals like `{| * 2 }` and named commands via `def`)
 * Modular design (`use` modules to unlock namespaced commands like `http.get` and `files.cat`)
 
 ## Getting started
@@ -53,6 +54,21 @@ Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md
 
 #| [{name: "Fred"}, {name: "Jerry"}, {name: "Tim"}] @ :name
 [ 'Fred', 'Jerry', 'Tim' ]
+```
+
+[Lambdas and named functions](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md#functions) for reusable pipelines
+
+```coffee
+#| [1, 2, 3] | map {| * 2 }
+[ 2, 4, 6 ]
+
+#| def human-years { $n | $n * 7 }
+#| human-years 6
+42
+
+#| def dog-years {| * 7}
+#| 6 | dog-years
+42
 ```
 
 Designed for easy interaction with JSON APIs

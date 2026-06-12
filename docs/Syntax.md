@@ -6,6 +6,8 @@
 * [Variables](#variables)
 * [Pipelines](#pipelines)
 * [Sub-pipes](#sub-pipes)
+* [Expressions](#expressions)
+* [Functions](#functions)
 * [At-expressions](#at-expressions)
 
 ## Commands
@@ -167,6 +169,184 @@ Sub-pipes are passed the same input as the outer command.
 #| list 1 2 3 || echo $( * 2 ) "/ 2"
 [ '2 / 2', '4 / 2', '6 / 2' ]
 ```
+
+## Expressions
+
+Infix expressions provide familiar arithmetic and comparison syntax wherever a
+command can appear. Operands may be numbers, quoted strings, `$vars`
+(including `$!`), sub-pipes, or parenthesized expressions. Operators may be
+written with or without surrounding whitespace, and bare words are never
+operands, so prefix commands like `* 7` work as before.
+
+```coffee
+#| 2 + 3 * 4
+14
+
+#| 12+1
+13
+
+#| (2 + 3) * 4
+20
+
+#| 10|$!-4
+6
+
+#| [1, 2, 3] || $! * 2
+[ 2, 4, 6 ]
+```
+
+Arithmetic operators are `+ - * / %`; comparisons are `< > <= >= == !=` and
+evaluate to booleans, which makes natural filter predicates:
+
+```coffee
+#| 5 > 3
+true
+
+#| [{name: 'sparky', age: 58}, {name: 'woofer', age: 6}] | filter {| $(@ age) > 30 } @ :name
+[ 'sparky' ]
+```
+
+`*` and `/` bind tighter than `+` and `-`, which bind tighter than
+comparisons.
+
+## Functions
+
+A lambda literal `{| pipeline... }` creates a *function value*: an
+unevaluated pipeline that can be stored in variables, passed to commands, and
+invoked later. Piping into a lambda invokes it with the piped input.
+
+```coffee
+#| 5 | {| * 2 }
+10
+
+#| $double = {| * 2 }
+
+#| 5 | $double
+10
+```
+
+### Higher-order commands
+
+`map`, `each`, `reduce` and `filter` take a lambda and apply it across a
+list. The lambda receives each item as its input.
+
+```coffee
+#| [1, 2, 3] | map {| * 2 }
+[ 2, 4, 6 ]
+
+#| [{name: 'huey', ok: true}, {name: 'dewey', ok: false}] | filter {| @ ok } @ :name
+[ 'huey' ]
+```
+
+`sortBy` and `groupBy` accept a lambda as a key extractor (a plain string
+argument is still treated as a key name):
+
+```coffee
+#| [{n: 3}, {n: 1}, {n: 2}] | sortBy {| @ n } @ :n
+[ 1, 2, 3 ]
+```
+
+`reduce` passes the accumulator as the lambda's input and the current item as
+its first argument:
+
+```coffee
+#| [1, 2, 3, 4] | reduce { $x | $! + $x } 0
+10
+```
+
+### Naming the input
+
+The input may be given a name by writing a `$`-variable between the opening
+brace and the first pipe. The name binds the first command argument if one
+is given, and the piped input otherwise — so both call styles work:
+
+```coffee
+#| def human-years { $n | $n * 7 }
+
+#| human-years 6
+42
+
+#| 6 | human-years
+42
+```
+
+Multiple names bind arguments in order, with any leftover name receiving the
+piped input; arguments beyond the named ones are available as the `$args`
+list.
+
+```coffee
+#| def pair { $a $b | [$a, $b] }
+
+#| pair 1 2
+[ 1, 2 ]
+
+#| 5 | pair 3
+[ 3, 5 ]
+
+# 4 is piped input, 7 is an argument binding to $n
+#| def multiply-by { $n | * $n }
+
+#| 4 | multiply-by 7
+28
+```
+
+The `$` sigil is what distinguishes a name from a command: a plain
+pipe-through lambda always starts `{|`, and a body of bare words like
+`{| trim | upper }` is always a pipeline, never a name list.
+
+### Named functions with `def`
+
+`def` registers a lambda as a named command. Defined names work anywhere a
+command does, including as bare-name references passed to higher-order
+commands.
+
+```coffee
+#| def human-years { $n | $n * 7 }
+
+#| human-years 6
+42
+
+#| def shout {| upper }
+
+#| echo hello | shout
+'HELLO'
+
+#| list a b | map shout
+[ 'A', 'B' ]
+```
+
+### `call` and closures
+
+`call` invokes a function value explicitly, passing along arguments. Lambdas
+close over the scope they were created in, so a function can build and return
+another function:
+
+```coffee
+#| set greet { $name | echo Hello $name }
+
+#| call $greet World
+'Hello World'
+
+#| def adder { $n | {| + $n } }
+
+#| 3 | call $(adder 5)
+8
+```
+
+### Lazy branches with `if`
+
+`if` takes a condition and one or two branches. Lambda branches are lazy —
+only the taken branch ever runs. (Plain values are also accepted, as before.)
+
+```coffee
+#| if true {| echo yes } {| echo no }
+'yes'
+```
+
+**Note:** `alias` remains a lighter-weight cousin of `def`: the body is a
+single pipeline (it stops at `;`), call-site arguments are appended to the
+body's first command, and the body runs in the caller's scope. Use `def` when
+you want named parameters or a multi-pipeline body.
 
 ## At-expressions
 

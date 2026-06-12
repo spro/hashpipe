@@ -1,3 +1,11 @@
+{
+  function foldInfix(head, tail) {
+    return tail.reduce(function(acc, t) {
+      return {op: t.op, left: acc, right: t.right};
+    }, head);
+  }
+}
+
 start
   = pipelines
 
@@ -86,7 +94,21 @@ dquoted_literal = dquote_ ls:("\\n" { return '\n'; } / escd_char / [^"] )* _dquo
 quoted_literal = squoted_literal / dquoted_literal
 valid_key = letter_word/quoted_literal
 quoted_phrase = quoted_literal / quoted_cmd
-cmd_phrase = quoted_phrase / cmd_word / sub_cmd
+cmd_phrase = quoted_phrase / cmd_word / lambda / sub_cmd
+
+// Lambda literals: a pipeline block {| body }, optionally naming its input:
+// { $name | body }. Names bind arguments positionally; a name with no
+// matching argument receives the piped input. The $ sigil is required, so
+// bare words are never names and {| trim | upper } stays a two-stage body.
+lambda =
+    "{" space params:lambda_params? "|" space body:pipelines space "}"
+    { return {fn: body, params: params || [], src: text()}; }
+
+lambda_params =
+    head:param_name tail:(space1 w:param_name { return w; })* space
+    { return [head].concat(tail); }
+
+param_name = "$" w:letter_word { return w; }
 
 bool_word = "true" / "false"
 
@@ -95,8 +117,45 @@ cmd = obj_cmd / list_cmd /
       tail:(space c:cmd_phrase { return c; })*
       { return [head].concat(tail); }
 
-cmd_at = 
-    cmd:cmd
+// Infix expressions: $n * 7, 2 + 3 * 4, $(@ age) > 30
+// Operands are values (numbers, strings, $vars, sub-pipes, parens) — never
+// bare command words — so prefix commands like `* 7` and words like
+// `human-years` are unaffected.
+
+space1 = [ \n\t\r]+
+comp_op = "<=" / ">=" / "==" / "!=" / "<" / ">"
+add_op = "+" / "-"
+mul_op = "*" / "/" / "%"
+
+infix_at =
+    e:infix_expr &{ return e.op != null; }
+    atexp:(at atexp:at_expression { return atexp; })?
+    { return {expr: e, at: atexp}; }
+
+infix_expr = comparison
+
+comparison =
+    head:additive tail:(space op:comp_op space r:additive { return {op: op, right: r}; })*
+    { return foldInfix(head, tail); }
+
+additive =
+    head:multiplicative tail:(space op:add_op space r:multiplicative { return {op: op, right: r}; })*
+    { return foldInfix(head, tail); }
+
+multiplicative =
+    head:infix_operand tail:(space op:mul_op space r:infix_operand { return {op: op, right: r}; })*
+    { return foldInfix(head, tail); }
+
+infix_operand =
+    number:number { return {val: number}; }
+    / v:var_word { return {var: v}; }
+    / q:quoted_literal { return {val: q.quoted.join('')}; }
+    / sub_cmd
+    / "(" space e:infix_expr space ")" { return e; }
+
+cmd_at =
+    infix_at
+    / cmd:cmd
     atexp:(at atexp:at_expression { return atexp; })?
     { return {cmd: cmd, at: atexp}; }
     / atexp:(at atexp:at_expression { return atexp; })
@@ -108,10 +167,12 @@ var_exp =
     { return {var: var_word, at: atexp}; }
 
 start_cmd =
-    var_exp
+    infix:infix_at { infix.type = 'pipe'; return infix; }
+    / var_exp
     / number:number { return {val: number}; }
     / quoted:quoted_phrase { return {val: quoted}; }
     / bool:bool_word { return {val: bool == 'true'}; }
+    / lambda:lambda { return {val: lambda}; }
     / cmd_at:cmd_at { cmd_at.type = 'pipe'; return cmd_at; }
 piped_cmd =
     pipe cmd_at:cmd_at
@@ -148,10 +209,17 @@ pipelines =
     { return [head].concat(tail); }
 
 aliasing =
-    space "alias" space alias:letter_word space "=" space rest:[^;]+
-    { return [{cmd: ['alias', alias, rest.join('').trim()]}]; }
+    space "alias" space alias:letter_word space "=" space body:alias_body
+    { return [{cmd: ['alias', alias, body]}]; }
 
-setup = var_word:var_word space "=" space { return var_word; }
+// An alias body is a single parsed pipeline (stops at ';'), carried as an
+// unevaluated lambda token so definition-time substitution never happens.
+alias_body =
+    body:pipeline
+    { return {fn: [body], params: [], src: text().trim()}; }
+
+// `!"="` keeps `$x == y` an equality comparison rather than an assignment
+setup = var_word:var_word space "=" !"=" space { return var_word; }
 
 setting =
     space set:setup pipeline:pipeline
@@ -183,4 +251,3 @@ list_cmd = "[" space head:start_cmd tail:(comma start_cmd)* space "]"
         var list_cmd = ['list'].concat(items);
         return list_cmd;
     }
-

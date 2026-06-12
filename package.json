@@ -20,6 +20,7 @@
     "build-ts": "tsc",
     "build-grammar": "pegjs -o src/grammar.js grammar.peg && cp src/grammar.js lib/grammar.js",
     "build": "npm run build-grammar && npm run build-ts",
+    "repl": "node lib/repl.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

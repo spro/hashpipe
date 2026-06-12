@@ -1,5 +1,6 @@
-import { wrapall } from "../helpers"
-import { BuiltinMap, toNumber } from "./common"
+import * as async from "async"
+import { Callback, Lambda, wrapall } from "../helpers"
+import { BuiltinMap, resolveCallable, toNumber } from "./common"
 
 // Array/object construction, traversal, and aggregation helpers.
 
@@ -229,13 +230,92 @@ const filter = (
     ctx: any,
     cb: (err: any, result?: any) => void,
 ) => {
-    if (args.length > 0) {
+    const callable = resolveCallable(args[0], ctx)
+    if (callable) {
+        const rest = args.slice(1)
+        async.map(
+            inp,
+            (item: any, _cb: Callback) => callable(item, rest, _cb),
+            (err: any, keeps?: any[]) => {
+                if (err) return cb(err)
+                cb(
+                    null,
+                    inp.filter((_, i) => keeps![i]),
+                )
+            },
+        )
+    } else if (args.length > 0) {
+        // Legacy: a raw JavaScript expression over `i`
         const filterCode = "return (" + args.join(" ") + ");"
         const filterFn = new Function("i", filterCode) as (item: any) => boolean
         cb(null, inp.filter(filterFn))
     } else {
         cb(null, inp.filter(Boolean))
     }
+}
+
+const map = (
+    inp: any[],
+    args: any[],
+    ctx: any,
+    cb: (err: any, result?: any) => void,
+) => {
+    const callable = resolveCallable(args[0], ctx)
+    if (!callable) {
+        return cb(`map: not a lambda or command name: ${args[0]}`)
+    }
+    const rest = args.slice(1)
+    async.map(inp, (item: any, _cb: Callback) => callable(item, rest, _cb), cb)
+}
+
+const each = (
+    inp: any[],
+    args: any[],
+    ctx: any,
+    cb: (err: any, result?: any) => void,
+) => {
+    const callable = resolveCallable(args[0], ctx)
+    if (!callable) {
+        return cb(`each: not a lambda or command name: ${args[0]}`)
+    }
+    const rest = args.slice(1)
+    async.mapSeries(
+        inp,
+        (item: any, _cb: Callback) => callable(item, rest, _cb),
+        (err: any) => {
+            if (err) return cb(err)
+            cb(null, inp)
+        },
+    )
+}
+
+const reduce = (
+    inp: any[],
+    args: any[],
+    ctx: any,
+    cb: (err: any, result?: any) => void,
+) => {
+    const callable = resolveCallable(args[0], ctx)
+    if (!callable) {
+        return cb(`reduce: not a lambda or command name: ${args[0]}`)
+    }
+    const items = inp.slice()
+    const memo = args.length > 1 ? args[1] : items.shift()
+    async.reduce(
+        items,
+        memo,
+        (acc: any, item: any, _cb: Callback) => callable(acc, [item], _cb),
+        cb,
+    )
+}
+
+// Map items to keys through a lambda, asynchronously
+const lambdaKeys = (
+    inp: any[],
+    lam: Lambda,
+    cb: (err: any, keys?: any[]) => void,
+) => {
+    async.map(inp, (item: any, _cb: Callback) => lam.call(item, [], _cb), cb)
 }
 
 const sort = (
@@ -493,6 +573,9 @@ const collectionsBuiltins: BuiltinMap = {
     match,
     grep: match,
     filter,
+    map,
+    each,
+    reduce,
     sort,
     count,
     bin,
@@ -503,5 +586,45 @@ const collectionsBuiltins: BuiltinMap = {
 }
 
 Object.assign(collectionsBuiltins, wrapall(collectionHelpers, "", true, true))
+
+// sortBy/groupBy take either a key name (string, as before) or a lambda
+// key extractor. Bare command names stay strings here so object keys that
+// happen to match a command are never misread as callables.
+
+collectionsBuiltins.sortBy = (inp, args, ctx, cb) => {
+    if (args[0] instanceof Lambda) {
+        lambdaKeys(inp, args[0], (err, keys) => {
+            if (err) return cb(err)
+            const paired = inp.map((item: any, i: number) => [keys![i], item])
+            paired.sort((a: any[], b: any[]) => {
+                if (a[0] === b[0]) return 0
+                return a[0] > b[0] ? 1 : -1
+            })
+            cb(
+                null,
+                paired.map((pair: any[]) => pair[1]),
+            )
+        })
+    } else {
+        cb(null, collectionHelpers.sortBy(inp, args[0]))
+    }
+}
+
+collectionsBuiltins.groupBy = (inp, args, ctx, cb) => {
+    if (args[0] instanceof Lambda) {
+        lambdaKeys(inp, args[0], (err, keys) => {
+            if (err) return cb(err)
+            const groups: Record<string, any[]> = {}
+            inp.forEach((item: any, i: number) => {
+                const key = String(keys![i])
+                if (!groups[key]) groups[key] = []
+                groups[key].push(item)
+            })
+            cb(null, groups)
+        })
+    } else {
+        cb(null, collectionHelpers.groupBy(inp, args[0]))
+    }
+}
 
 export default collectionsBuiltins

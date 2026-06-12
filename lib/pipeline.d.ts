@@ -1,4 +1,4 @@
-import { Callback, HashpipeFunction } from "./helpers";
+import { Callback, HashpipeFunction, Lambda } from "./helpers";
 export interface AtExpression {
     get?: any;
     map?: any;
@@ -9,6 +9,15 @@ export interface CommandToken {
     cmd?: any[];
     at?: AtExpression[];
     type?: string;
+    val?: any;
+    var?: string;
+    sub?: any[];
+    expr?: ExprNode;
+}
+export interface ExprNode {
+    op?: string;
+    left?: ExprNode;
+    right?: ExprNode;
     val?: any;
     var?: string;
     sub?: any[];
@@ -29,7 +38,7 @@ export declare class Scope {
     constructor(init?: ScopeInit);
     set(t: string, k: string, v: any): this;
     get(t: string, k?: string): any;
-    alias(a: string, s: string): void;
+    alias(a: string, s: string | Lambda): void;
     subScope(init?: ScopeInit): Scope;
     topScope(): Scope;
 }

@@ -1,4 +1,5 @@
 import type { Pipeline } from "../pipeline"
+import { Lambda } from "../helpers"
 import { BuiltinMap } from "./common"
 
 // State management and module loading helpers that mutate the scope.
@@ -58,6 +59,21 @@ const environmentBuiltins: BuiltinMap = {
         const messageItems = unique.length ? unique : args
         cb(null, "Using: " + messageItems.join(", "))
     },
+    def: (inp, args, ctx, cb) => {
+        const name = args[0]
+        const lam = args[1]
+        if (!(lam instanceof Lambda)) {
+            return cb(
+                `def: second argument must be a lambda, e.g. def ${name} {| ... |}`,
+            )
+        }
+        ctx.topScope().set("fns", name, lam)
+        cb(null, {
+            success: true,
+            def: name,
+            src: lam.src,
+        })
+    },
     alias: (inp, args, ctx, cb) => {
         const alias = args[0]
         const script = args[1]
@@ -68,7 +84,7 @@ const environmentBuiltins: BuiltinMap = {
             cb(null, {
                 success: true,
                 alias,
-                script,
+                script: script instanceof Lambda ? script.src : script,
             })
         }
     },
