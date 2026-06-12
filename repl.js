@@ -85,6 +85,43 @@
         parent.appendChild(span("punct", (compact ? " " : "") + (isArr ? "]" : "}")))
     }
 
+    // The help command returns a structured page; render its examples as
+    // clickable chips so they can be tried in place
+    function renderHelp(parent, page) {
+        var help = div("help")
+        page.sections.forEach(function (section) {
+            var title = div("help-title")
+            title.textContent = section.title
+            help.appendChild(title)
+            ;(section.lines || []).forEach(function (line) {
+                var l = div("help-line")
+                l.textContent = line
+                help.appendChild(l)
+            })
+            ;(section.examples || []).forEach(function (ex) {
+                var row = div("help-example")
+                var chip = document.createElement("code")
+                chip.className = "example"
+                chip.textContent = ex.cmd
+                chip.addEventListener("click", function () {
+                    saveHistory(ex.cmd)
+                    run(ex.cmd)
+                })
+                row.appendChild(chip)
+                row.appendChild(span("help-note", ex.note))
+                help.appendChild(row)
+            })
+        })
+        var docs = div("help-docs")
+        var link = document.createElement("a")
+        link.href = page.docs
+        link.target = "_blank"
+        link.textContent = "full syntax guide →"
+        docs.appendChild(link)
+        help.appendChild(docs)
+        parent.appendChild(help)
+    }
+
     function append(node) {
         scrollback.appendChild(node)
         terminal.scrollTop = terminal.scrollHeight
@@ -128,6 +165,8 @@
                 var errLine = div("error")
                 errLine.textContent = "[ERROR] " + err
                 entry.appendChild(errLine)
+            } else if (Hashpipe.HelpPage && data instanceof Hashpipe.HelpPage) {
+                renderHelp(entry, data)
             } else if (data != null) {
                 var out = div("output")
                 renderInto(out, data, 0)
@@ -192,7 +231,8 @@
 
     var banner = div("banner")
     banner.textContent =
-        "hashpipe browser repl — the http module is preloaded (get, post, " +
-        "put, delete via fetch). Up/down arrows recall history."
+        "hashpipe browser repl — type help to get started. The http module " +
+        "is preloaded (get, post, put, delete via fetch); up/down arrows " +
+        "recall history."
     append(banner)
 })()
