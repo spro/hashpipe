@@ -1,5 +1,5 @@
-alias hello-delayed = sleep 1000 | echo Hello from numero $! at $( now );
-log Starting at $( now );
+# Series-maps each number through a named function.
+def hello-delayed { $n | sleep 1000 | echo Hello from numero $n at $( now ) }
 
-range 0 10 |= hello-delayed
-
+log Starting at $( now )
+range 1 11 |= hello-delayed
