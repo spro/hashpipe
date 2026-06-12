@@ -6,7 +6,44 @@
     var shell = new Hashpipe.WebShell()
     var terminal = document.getElementById("terminal")
     var scrollback = document.getElementById("scrollback")
+    var inputLine = document.getElementById("input-line")
     var input = document.getElementById("input")
+
+    // ---- mobile viewport / keyboard handling ----
+
+    var initialViewportHeight =
+        window.visualViewport && window.visualViewport.height
+            ? window.visualViewport.height
+            : window.innerHeight
+
+    function scrollToPrompt() {
+        window.requestAnimationFrame(function () {
+            terminal.scrollTop = terminal.scrollHeight
+            if (inputLine.scrollIntoView) inputLine.scrollIntoView({ block: "end" })
+        })
+    }
+
+    function syncViewport() {
+        var viewport = window.visualViewport
+        var height = viewport && viewport.height ? viewport.height : window.innerHeight
+        document.documentElement.style.setProperty("--app-height", height + "px")
+
+        var keyboardLikelyOpen =
+            document.activeElement === input && height < initialViewportHeight - 90
+        document.body.classList.toggle("keyboard-open", keyboardLikelyOpen)
+        if (document.activeElement === input) scrollToPrompt()
+    }
+
+    syncViewport()
+    window.addEventListener("resize", syncViewport)
+    window.addEventListener("orientationchange", function () {
+        initialViewportHeight = window.innerHeight
+        setTimeout(syncViewport, 250)
+    })
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", syncViewport)
+        window.visualViewport.addEventListener("scroll", syncViewport)
+    }
 
     // ---- history (persisted like ~/.pipeline_history) ----
 
@@ -124,7 +161,7 @@
 
     function append(node) {
         scrollback.appendChild(node)
-        terminal.scrollTop = terminal.scrollHeight
+        scrollToPrompt()
     }
 
     function div(cls) {
@@ -174,7 +211,7 @@
             }
             input.disabled = false
             input.focus()
-            terminal.scrollTop = terminal.scrollHeight
+            scrollToPrompt()
         })
     }
 
@@ -207,6 +244,12 @@
                     historyIndex === history.length ? draft : history[historyIndex]
             }
         }
+    })
+
+    input.addEventListener("focus", syncViewport)
+    input.addEventListener("blur", function () {
+        document.body.classList.remove("keyboard-open")
+        setTimeout(syncViewport, 0)
     })
 
     // Backstop: never leave the input disabled if an error escapes a command

@@ -3,12 +3,14 @@
 html, body {
   height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 body {
-  /* dvh tracks the on-screen keyboard on mobile; 100% is the fallback */
+  /* --app-height is kept in sync with visualViewport for iOS Safari. */
   height: 100vh;
   height: 100dvh;
+  height: var(--app-height, 100dvh);
 }
 
 body {
@@ -51,9 +53,12 @@ nav a:hover { text-decoration: underline; }
 
 #terminal {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 14px 24px;
+  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
   cursor: text;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 #scrollback .entry { margin-bottom: 10px; }
@@ -109,6 +114,12 @@ nav a:hover { text-decoration: underline; }
 #input-line {
   display: flex;
   align-items: baseline;
+  position: sticky;
+  bottom: 0;
+  margin: 8px -24px -14px;
+  padding: 8px 24px calc(14px + env(safe-area-inset-bottom));
+  background: #14171c;
+  border-top: 1px solid transparent;
 }
 
 #input-line .prompt {
@@ -119,6 +130,7 @@ nav a:hover { text-decoration: underline; }
 
 #input {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -163,10 +175,31 @@ footer .try { margin-right: 8px; }
     margin-bottom: 4px;
   }
 
-  #terminal { padding: 10px 14px; }
+  #terminal { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
 
   /* 16px stops iOS Safari from zooming into the focused input */
-  #input { font-size: 16px; }
+  #input {
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  #input-line {
+    margin: 8px -14px -10px;
+    padding: 8px 14px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  body.keyboard-open header { padding-bottom: 6px; }
+
+  body.keyboard-open .tagline,
+  body.keyboard-open nav,
+  body.keyboard-open footer {
+    display: none;
+  }
+
+  body.keyboard-open #input-line {
+    border-top-color: #242a33;
+    box-shadow: 0 -10px 18px rgba(20, 23, 28, 0.9);
+  }
 
   /* One swipeable row of examples instead of a half-screen block */
   footer {
