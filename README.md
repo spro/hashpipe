@@ -7,7 +7,7 @@ Hashpipe is an experimental JSON-based shell. Imagine that Bash was designed for
 Featuring:
 
 * JSON-typed input & output (strings, numbers, objects, and arrays)
-* Alternative piping constructs (like the parallel pipe `||` and sequential pipe `|=`)
+* Alternative piping constructs (like the parallel pipe `||`, sequential pipe `|=`, and error pipe `|?`)
 * First-class functions (lambda literals like `{| * 2 }` and named commands via `def`)
 * Modular design (`use` modules to unlock namespaced commands like `http.get` and `files.cat`)
 

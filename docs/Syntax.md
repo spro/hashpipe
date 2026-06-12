@@ -150,6 +150,21 @@ and return a new list of each result.
 [ 'Sir Tom', 'Sir Fred', 'Sir George' ]
 ```
 
+A failed stage normally aborts the whole pipeline. The error pipe `|?`
+catches the failure instead: its command runs only when something upstream
+failed, receiving the error as input, and is skipped entirely on success.
+
+```coffee
+#| no-such-command |? echo recovered: $!
+'recovered: No command no-such-command. '
+
+#| echo fine |? echo never-runs
+'fine'
+
+#| no-such-command |? val fallback | upper
+'FALLBACK'
+```
+
 ## Sub-pipes
 
 Create a sub-pipe with `$( command... )`. The sub-pipe is executed and
@@ -313,6 +328,23 @@ commands.
 
 #| list a b | map shout
 [ 'A', 'B' ]
+```
+
+Defined names — along with aliases and module commands — take precedence
+over builtins, so any command can be redefined. `builtin` runs the original
+regardless of shadowing, and `which` reports where a name resolves:
+
+```coffee
+#| def upper {| echo shadowed }
+
+#| echo hi | upper
+'shadowed'
+
+#| echo hi | builtin upper
+'HI'
+
+#| which upper
+{ command: 'upper', type: 'def', src: '{| echo shadowed }', shadows: 'builtin' }
 ```
 
 ### `call` and closures

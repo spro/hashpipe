@@ -360,7 +360,7 @@ export function runPipeline(
     // Apply an at expression at the end
     const applyAt = (data: any, cb: Callback) => {
         if (cmd_token.at != null) {
-            if (cmd_type === "ppipe" || cmd_type === "spipe") {
+            if (cmd_type === "||" || cmd_type === "|=") {
                 const _at = (_data: any, _cb: Callback) => {
                     at(_data, cmd_token.at!, ctx, _cb)
                 }
@@ -387,12 +387,27 @@ export function runPipeline(
             }
         }
     } else {
+        // An |? stage catches the upstream error as its input; any other
+        // error aborts the pipeline
+        const routeError = (err: any) => {
+            if (cmd_tokens[0]?.type === "|?") {
+                return runPipeline(cmd_tokens, err, ctx, final_cb)
+            }
+            final_cb(err)
+        }
+
         // Create a callback to continue the pipeline otherwise
         cb = (err: Error | null, ret?: any) => {
-            if (err) return final_cb(err)
+            if (err) return routeError(err)
             applyAt(ret, (err: Error | null, ret?: any) => {
-                if (err) return final_cb(err)
-                runPipeline(cmd_tokens, ret, ctx, final_cb)
+                if (err) return routeError(err)
+                // |? stages only run on error; skip them on success
+                let next = cmd_tokens
+                while (next.length && next[0].type === "|?") {
+                    next = next.slice(1)
+                }
+                if (!next.length) return final_cb(null, ret)
+                runPipeline(next, ret, ctx, final_cb)
             })
         }
     }
@@ -411,24 +426,8 @@ export function runPipeline(
 
     // Parse arguments and then execute
 
-    // Parallel if ppiped
-    if (cmd_type === "ppipe") {
-        if (DEBUG) console.log("PPIPE: " + _inspect(cmd_args))
-        const tasks = inp.map((_inp: any) => {
-            return (_cb: Callback) => runStage(_inp, _cb)
-        })
-        async.parallel(tasks, cb)
-    }
-    // Series if spiped
-    else if (cmd_type === "spipe") {
-        if (DEBUG) console.log("SPIPE: " + _inspect(cmd_args))
-        const tasks = inp.map((_inp: any) => {
-            return (_cb: Callback) => runStage(_inp, _cb)
-        })
-        async.series(tasks, cb)
-    }
     // Return literal value (number or string) if $val
-    else if (cmd_token.val != null) {
+    if (cmd_token.val != null) {
         if (DEBUG) console.log("VAL: " + _inspect(cmd_args))
         parseArgs(inp, [cmd_token.val], (err: Error | null, parsed?: any[]) => {
             if (err) return cb(err)
@@ -448,11 +447,52 @@ export function runPipeline(
         }
         cb(null, val)
     }
-    // Just execute if single piped
+    // Otherwise look the pipe operator up in the registry
     else {
-        if (DEBUG) console.log("PIPE: " + _inspect(cmd_args))
-        runStage(inp, cb)
+        if (DEBUG) console.log((cmd_type || "|") + ": " + _inspect(cmd_args))
+        const handler = pipeHandlers[cmd_type || "|"]
+        if (!handler) {
+            return final_cb(`Unknown pipe operator ${cmd_type}. `)
+        }
+        handler(inp, ctx, runStage, cb)
     }
+}
+
+// Pipe operators are pluggable: each handler decides how a stage consumes
+// its input. New operators (parsed generically by the grammar) can be
+// registered at runtime without touching runPipeline.
+
+export type PipeHandler = (
+    inp: any,
+    ctx: Scope,
+    runStage: (inp: any, cb: Callback) => void,
+    cb: Callback,
+) => void
+
+const pipeHandlers: Record<string, PipeHandler> = {
+    // standard pipe: run the stage once with the piped input
+    "|": (inp, ctx, run, cb) => run(inp, cb),
+    // error pipe: only reached via error routing in runPipeline, where the
+    // upstream error arrives as the input; skipped entirely on success
+    "|?": (inp, ctx, run, cb) => run(inp, cb),
+    // parallel pipe: map the stage over a list in parallel
+    "||": (inp, ctx, run, cb) => {
+        const tasks = (inp as any[]).map(
+            (_inp) => (_cb: Callback) => run(_inp, _cb),
+        )
+        async.parallel(tasks, cb)
+    },
+    // series pipe: map the stage over a list one at a time
+    "|=": (inp, ctx, run, cb) => {
+        const tasks = (inp as any[]).map(
+            (_inp) => (_cb: Callback) => run(_inp, _cb),
+        )
+        async.series(tasks, cb)
+    },
+}
+
+export function registerPipeOperator(op: string, handler: PipeHandler): void {
+    pipeHandlers[op] = handler
 }
 
 // Evaluate an infix expression tree: resolve operands (literals, variables,
@@ -549,16 +589,19 @@ export function doCmd(_args: any[], inp: any, ctx: Scope, cb: Callback): void {
     if (cmd instanceof Lambda) {
         return invoke(() => cmd.call(inp, args, done))
     }
-    let fn = builtins[cmd]
+    // Scope chain first, builtins as fallback: defs, aliases, and module
+    // commands can shadow a builtin (the `builtin` command bypasses this)
+    let fn = ctx.get("fns", cmd)
     if (fn) {
-        invoke(() => fn(inp, args, ctx, done))
-    } else if ((fn = ctx.get("fns", cmd))) {
         const resolved = fn
         if (resolved instanceof Lambda) {
             invoke(() => resolved.call(inp, args, done))
         } else {
             invoke(() => resolved(inp, args, ctx, done))
         }
+    } else if ((fn = builtins[cmd])) {
+        const resolved = fn
+        invoke(() => resolved(inp, args, ctx, done))
     } else {
         cb(`No command ${cmd}. `)
     }

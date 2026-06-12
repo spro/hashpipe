@@ -62,9 +62,10 @@ at_expression =
 // Pipeline parser
 // ~~~~~~~~~~~~~~~
 
-pipe = space "|" space
-ppipe = space "||" space
-spipe = space "|=" space
+// Pipe operators are one generic rule: the suffix char selects the
+// operator and the runtime registry (pipeline.ts) decides what it means.
+// Unknown suffixes parse but fail loudly at runtime.
+pipe_op = space "|" suffix:[|=?&^~]? space { return "|" + (suffix || ""); }
 squote = space ['] space
 dquote = space ["] space
 squote_ = space [']
@@ -167,24 +168,18 @@ var_exp =
     { return {var: var_word, at: atexp}; }
 
 start_cmd =
-    infix:infix_at { infix.type = 'pipe'; return infix; }
+    infix:infix_at { infix.type = '|'; return infix; }
     / var_exp
     / number:number { return {val: number}; }
     / quoted:quoted_phrase { return {val: quoted}; }
     / bool:bool_word { return {val: bool == 'true'}; }
     / lambda:lambda { return {val: lambda}; }
-    / cmd_at:cmd_at { cmd_at.type = 'pipe'; return cmd_at; }
+    / cmd_at:cmd_at { cmd_at.type = '|'; return cmd_at; }
 piped_cmd =
-    pipe cmd_at:cmd_at
-    { cmd_at.type = 'pipe'; return cmd_at; }
-ppiped_cmd =
-    ppipe cmd_at:cmd_at
-    { cmd_at.type = 'ppipe'; return cmd_at; }
-spiped_cmd =
-    spipe cmd_at:cmd_at
-    { cmd_at.type = 'spipe'; return cmd_at; }
+    op:pipe_op cmd_at:cmd_at
+    { cmd_at.type = op; return cmd_at; }
 
-cmd_section = start_cmd / ppiped_cmd / spiped_cmd / piped_cmd 
+cmd_section = start_cmd / piped_cmd
 
 sub_cmd =
     "$(" pipelines:pipelines ")"

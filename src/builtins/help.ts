@@ -9,6 +9,7 @@ import debug from "./debug"
 import random from "./random"
 import time from "./time"
 import environment from "./environment"
+import meta from "./meta"
 
 // The `help` command returns a HelpPage value. Each frontend presents it
 // its own way: the terminal pretty-printer hits [inspect.custom] and gets
@@ -80,6 +81,7 @@ const categories: [string, BuiltinMap][] = [
     ["random", random],
     ["time", time],
     ["environment", environment],
+    ["meta", meta],
 ]
 
 function commandLines(ctx: any): string[] {
@@ -113,6 +115,10 @@ function buildHelpPage(ctx: any): HelpPage {
                 {
                     cmd: "list 1 2 3 |= + 1",
                     note: "series pipe: map one at a time",
+                },
+                {
+                    cmd: "no-such-command |? val recovered",
+                    note: "error pipe: catch a failed stage",
                 },
             ],
         },

@@ -7,6 +7,7 @@ import debug from "./debug"
 import random from "./random"
 import time from "./time"
 import environment from "./environment"
+import meta from "./meta"
 import help from "./help"
 import { BuiltinMap } from "./common"
 
@@ -22,6 +23,7 @@ const builtins: BuiltinMap = {
     ...random,
     ...time,
     ...environment,
+    ...meta,
     ...help,
 }
 

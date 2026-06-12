@@ -53,6 +53,8 @@ export declare class Pipeline extends Scope {
 }
 export declare function parsePipelines(cmd: string): any[];
 export declare function runPipeline(_cmd_tokens: CommandToken[], inp: any, ctx: Scope, final_cb: Callback): void;
+export type PipeHandler = (inp: any, ctx: Scope, runStage: (inp: any, cb: Callback) => void, cb: Callback) => void;
+export declare function registerPipeOperator(op: string, handler: PipeHandler): void;
 export declare function doCmd(_args: any[], inp: any, ctx: Scope, cb: Callback): void;
 export declare function at(inp: any, expr: AtExpression[], ctx: Scope, cb: Callback): void;
 //# sourceMappingURL=pipeline.d.ts.map
