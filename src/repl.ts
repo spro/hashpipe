@@ -81,12 +81,14 @@ class PipelineREPL {
     }
 
     executeScript(script: string, cb?: () => void): void {
+        const spinner = startSpinner()
         try {
             this.pipeline.exec(
                 script,
                 this.last_out,
                 this.context,
                 (err: Error | null, data?: any) => {
+                    spinner.stop()
                     this.last_out = data
                     // TODO: Some more advanced output handling,
                     // trim long lists with some ellipses
@@ -99,6 +101,7 @@ class PipelineREPL {
                 },
             )
         } catch (e) {
+            spinner.stop()
             this.writeError(e)
             if (cb) cb()
         }
@@ -235,6 +238,34 @@ function colorize(s: string, color: number): string {
     const prefix = "\x1b[" + color + "m"
     const suffix = "\x1b[0m"
     return prefix + s + suffix
+}
+
+// Loading spinner for slow commands. TTY-only so piped/scripted output
+// stays clean, and debounced so fast commands never flash it.
+
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+function startSpinner(): { stop: () => void } {
+    if (!process.stdout.isTTY) return { stop: () => {} }
+    let frame = 0
+    let visible = false
+    let interval: ReturnType<typeof setInterval> | undefined
+    const draw = () => {
+        process.stdout.write("\r" + colorize(SPINNER_FRAMES[frame], 36))
+        visible = true
+        frame = (frame + 1) % SPINNER_FRAMES.length
+    }
+    const delay = setTimeout(() => {
+        draw()
+        interval = setInterval(draw, 80)
+    }, 100)
+    return {
+        stop: () => {
+            clearTimeout(delay)
+            if (interval) clearInterval(interval)
+            if (visible) process.stdout.write("\r\x1b[K")
+        },
+    }
 }
 
 // History helpers
