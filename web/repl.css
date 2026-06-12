@@ -81,6 +81,31 @@ nav a:hover { text-decoration: underline; }
 
 .pending { color: #56c8d8; }
 
+.help { margin: 4px 0 2px; }
+
+.help-title {
+  color: #e8edf4;
+  font-weight: 600;
+  margin: 10px 0 4px;
+}
+
+.help-title:first-child { margin-top: 2px; }
+
+.help-line {
+  color: #8b95a3;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 1px 0;
+}
+
+.help-example { margin: 3px 0; }
+
+.help-note { color: #6c7683; margin-left: 10px; }
+
+.help-docs { margin-top: 10px; }
+
+.help-docs a { color: #56c8d8; }
+
 #input-line {
   display: flex;
   align-items: baseline;

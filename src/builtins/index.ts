@@ -7,6 +7,7 @@ import debug from "./debug"
 import random from "./random"
 import time from "./time"
 import environment from "./environment"
+import help from "./help"
 import { BuiltinMap } from "./common"
 
 // Aggregate builtins so existing imports keep working.
@@ -21,6 +22,7 @@ const builtins: BuiltinMap = {
     ...random,
     ...time,
     ...environment,
+    ...help,
 }
 
 export = builtins

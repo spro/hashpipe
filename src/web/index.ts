@@ -5,6 +5,7 @@
 
 import { Pipeline, Scope } from "../pipeline"
 import { Lambda } from "../helpers"
+import { HelpPage } from "../builtins/help"
 import type { Callback, HashpipeFunction } from "../helpers"
 
 // fetch-backed analog of the node http module. The url is the first
@@ -96,4 +97,4 @@ export class WebShell {
     }
 }
 
-export { Pipeline, Scope, Lambda }
+export { Pipeline, Scope, Lambda, HelpPage }
