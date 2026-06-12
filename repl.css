@@ -1,0 +1,119 @@
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: #14171c;
+  color: #d6dbe2;
+  font-family: "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+header {
+  padding: 18px 24px 10px;
+  border-bottom: 1px solid #242a33;
+}
+
+header h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #e8edf4;
+}
+
+header h1 .hash { color: #56c8d8; }
+
+.tagline {
+  margin: 0 0 6px;
+  max-width: 64em;
+  color: #8b95a3;
+}
+
+nav a {
+  color: #56c8d8;
+  text-decoration: none;
+  margin-right: 16px;
+}
+
+nav a:hover { text-decoration: underline; }
+
+#terminal {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 24px;
+  cursor: text;
+}
+
+#scrollback .entry { margin-bottom: 10px; }
+
+.cmdline { color: #e8edf4; }
+.cmdline .prompt { color: #56c8d8; margin-right: 8px; user-select: none; }
+
+.output {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #d6dbe2;
+}
+
+.output .str    { color: #a5d6a7; }
+.output .num    { color: #ffd54f; }
+.output .bool   { color: #f48fb1; }
+.output .nil    { color: #6c7683; }
+.output .key    { color: #d6dbe2; }
+.output .punct  { color: #8b95a3; }
+.output .lambda { color: #56c8d8; font-style: italic; }
+
+.error { color: #ef5350; white-space: pre-wrap; }
+
+.banner { color: #6c7683; margin-bottom: 14px; }
+
+#input-line {
+  display: flex;
+  align-items: baseline;
+}
+
+#input-line .prompt {
+  color: #56c8d8;
+  margin-right: 8px;
+  user-select: none;
+}
+
+#input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e8edf4;
+  font: inherit;
+  padding: 0;
+}
+
+footer {
+  padding: 10px 24px 16px;
+  border-top: 1px solid #242a33;
+  color: #6c7683;
+}
+
+footer .try { margin-right: 8px; }
+
+.example {
+  display: inline-block;
+  margin: 3px 8px 3px 0;
+  padding: 2px 8px;
+  background: #1c2129;
+  border: 1px solid #2a313c;
+  border-radius: 4px;
+  color: #9fb4c7;
+  cursor: pointer;
+}
+
+.example:hover {
+  border-color: #56c8d8;
+  color: #d6dbe2;
+}

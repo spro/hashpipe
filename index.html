@@ -1,6 +1,44 @@
-<title>hashpipe</title><link rel="stylesheet" href="css/base.css"/><div class="commands"><pre class="command"><div class="prompt">#|</div>get hashpipe.io/about.json</pre><pre class="response">{
-    description: <span class='string'>"A command line for working with web APIs"</span>,
-    repo: <a href='http://github.com/spro/hashpipe' target='_blank'>http://github.com/spro/hashpipe</a>,
-    author: <a href='http://sprobertson.com/' target='_blank'>spro</a>,
-    wip: <span class='bool'>true</span>
-}</pre></div>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hashpipe — a JSON shell for the web</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='0' y='13' font-size='11' fill='%2356c8d8' font-family='monospace'>%23|</text></svg>">
+<link rel="stylesheet" href="repl.css">
+</head>
+<body>
+
+<header>
+  <h1><span class="hash">#|</span> hashpipe</h1>
+  <p class="tagline">An experimental JSON-based shell &mdash; bash, if it were designed
+  for web APIs instead of a filesystem. This is the real interpreter running in your
+  browser: type below or click an example.</p>
+  <nav>
+    <a href="https://github.com/spro/hashpipe">github</a>
+    <a href="https://github.com/spro/hashpipe/blob/master/docs/Syntax.md">syntax guide</a>
+  </nav>
+</header>
+
+<main id="terminal">
+  <div id="scrollback"></div>
+  <div id="input-line">
+    <span class="prompt">#|</span>
+    <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+  </div>
+</main>
+
+<footer>
+  <span class="try">try:</span>
+  <code class="example">get spro.github.io/hashpipe/about.json</code>
+  <code class="example">[1, 2, 3, 4] || * 5</code>
+  <code class="example">echo john jacob jingleheimer | split ' ' || upper</code>
+  <code class="example">def human-years { $n | $n * 7 } ; human-years 6</code>
+  <code class="example">get api.github.com/repos/spro/hashpipe @ {name, stars: stargazers_count, language}</code>
+  <code class="example">[{name: 'sparky', age: 58}, {name: 'woofer', age: 6}] | filter {| $(@ age) > 30 } @ :name</code>
+</footer>
+
+<script src="hashpipe.js"></script>
+<script src="repl.js"></script>
+</body>
+</html>
