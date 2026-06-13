@@ -1,5 +1,9 @@
 # Hashpipe syntax crash course
 
+This guide covers the language grammar. For command behavior, see
+[Commands.md](Commands.md). For end-to-end workflows, see
+[Cookbook.md](Cookbook.md).
+
 * [Commands](#commands)
 * [Literals](#literals)
 * [Arrays and objects](#arrays-and-objects)

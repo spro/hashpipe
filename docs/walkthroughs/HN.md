@@ -2,9 +2,9 @@
 
 *Note: Some of the output in this walkthrough is trimmed for visual convenience.*
 
-In this walkthrough you'll [retreive data from a JSON API](#retreiving-api-data), then learn a lot about [using at-expressions to navigate the data](#navigating-json-with-at-expressions), then apply your newfound skills to [build complex pipelines](#building-complex-pipelines) to learn more about the data.
+In this walkthrough you'll [retrieve data from a JSON API](#retrieving-api-data), then learn a lot about [using at-expressions to navigate the data](#navigating-json-with-at-expressions), then apply your newfound skills to [build complex pipelines](#building-complex-pipelines) to learn more about the data.
 
-## Retreiving API data
+## Retrieving API data
 
 The [Firebase HN API](https://github.com/HackerNews/API) query for "top stories" returns a list of post IDs:
 
@@ -38,7 +38,7 @@ This would be a little easier if we didn't have to type out *"http://hacker-news
 
 ### Making many requests in parallel
 
-Using that array of story IDs, we could get full data for each post by making a request to the `items/(id).json` endpoint. Hashpipe has a convenient parallel pipe `||` that will help to acheive this. This is going to pass each item in `$ids` to an individual `http.get` request, returning the results as a new array.
+Using that array of story IDs, we could get full data for each post by making a request to the `items/(id).json` endpoint. Hashpipe has a convenient parallel pipe `||` that will help to achieve this. This is going to pass each item in `$ids` to an individual `http.get` request, returning the results as a new array.
 
 ```hashpipe
 #| http.get $hnapi/topstories.json | set ids
@@ -496,7 +496,7 @@ We can be a bit more selective by using the `without` command to exclude some of
 
 ### Fetching comments
 
-Every story has an array of comment IDs called `kids`. Comments are retreived from the API using the same `item/(id).json` route as earlier.
+Every story has an array of comment IDs called `kids`. Comments are retrieved from the API using the same `item/(id).json` route as earlier.
 
 ```hashpipe
 #| $stories @ 10.kids

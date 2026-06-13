@@ -76,19 +76,19 @@ Designed for easy interaction with JSON APIs
 
 ```hashpipe
 #| use http
-#| http.get http://www.telize.com/geoip
-{ country: 'United States',
-  region: 'California',
-  city: 'Mountain View',
-  postal_code: '94043' }
-
-#| {encoded: 'SGV5IHRoZXJl'} | http.post http://spro.webscript.io/base64
-{ decoded: 'Hey there' }
+#| http.get https://api.github.com/repos/spro/hashpipe @ {name, language, stars: stargazers_count}
+{ name: 'hashpipe', language: 'TypeScript', stars: ... }
 ```
 
 ## Learning more
 
-Try one of the Hashpipe walkthroughs to see it in action:
+Start with the core docs:
+
+* [Syntax crash course](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md) for the language
+* [Command reference](https://github.com/spro/hashpipe/blob/master/docs/Commands.md) for builtins and bundled modules
+* [Cookbook](https://github.com/spro/hashpipe/blob/master/docs/Cookbook.md) for common workflows
+
+Then try one of the Hashpipe walkthroughs to see it in action:
 
 * [What's the weather like at Google?](https://github.com/spro/hashpipe/blob/master/docs/walkthroughs/GoogleWeather.md)
 * [Exploring Hacker News with Hashpipe](https://github.com/spro/hashpipe/blob/master/docs/walkthroughs/HN.md)
