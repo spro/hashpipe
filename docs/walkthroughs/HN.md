@@ -8,14 +8,14 @@ In this walkthrough you'll [retreive data from a JSON API](#retreiving-api-data)
 
 The [Firebase HN API](https://github.com/HackerNews/API) query for "top stories" returns a list of post IDs:
 
-```coffee
+```hashpipe
 #| http.get https://hacker-news.firebaseio.com/v0/topstories.json
 [ 9053496, 9053286, 9052925, 9053621, 9053694, ... ]
 ```
 
 We can get data for a single post using its ID:
 
-```coffee
+```hashpipe
 #| http.get https://hacker-news.firebaseio.com/v0/item/9050970.json
 { id: 9050970,
   time: 1423952713,
@@ -30,7 +30,7 @@ We can get data for a single post using its ID:
 
 This would be a little easier if we didn't have to type out *"http://hacker-news.fire..."* every time, so let's set that as a variable:
 
-```coffee
+```hashpipe
 #| set hnapi https://hacker-news.firebaseio.com/v0
 #| http.get $hnapi/topstories.json
 [ 9053496, 9053286, 9052925, 9053621, 9053694, ... ]
@@ -40,7 +40,7 @@ This would be a little easier if we didn't have to type out *"http://hacker-news
 
 Using that array of story IDs, we could get full data for each post by making a request to the `items/(id).json` endpoint. Hashpipe has a convenient parallel pipe `||` that will help to acheive this. This is going to pass each item in `$ids` to an individual `http.get` request, returning the results as a new array.
 
-```coffee
+```hashpipe
 #| http.get $hnapi/topstories.json | set ids
 [ 9053496, 9053286, 9052925, 9053621, 9053694, ... ]
 
@@ -76,7 +76,7 @@ Now `$stories` is a big array of story objects. What can we do with it?
 
 As a cautious first step, let's peek at the first object in `$stories`. Any command can be followed by an *at-expression*, which is a special suffix used to access items in arrays or objects.
 
-```coffee
+```hashpipe
 #| $stories @ .0
 { id: 9053496,
   time: 1424025204,
@@ -89,7 +89,7 @@ As a cautious first step, let's peek at the first object in `$stories`. Any comm
 
 This at-expression uses the `.` **(get)** operator and can be read as `get 0`, simply accessing item `0` of the `$stories` array (the first story object). Let's go deeper...
 
-```coffee
+```hashpipe
 #| $stories @ .0 .id
 9053496
 
@@ -116,7 +116,7 @@ This is about equivalent to writing `stories[0].id` or `stories[0].kids[3]` in J
 
 What about looking at data from *each* story?
 
-```coffee
+```hashpipe
 #| $stories @ :title
 [ '64-bit Linux Return-Oriented Programming',
   'Asynchronous Python and Databases',
@@ -133,7 +133,7 @@ Using the `:` **(map)** operator in an at-expression works similarly to the `.` 
 
 A map operation always outputs an array, so further operations can extract specific items:
 
-```coffee
+```hashpipe
 #| $stories @ :title.10
 'Zero size objects'
 
@@ -150,7 +150,7 @@ One last feature of at-expressions is *sub-expressions* that can be used to outp
 
 Here's a full object to work with:
 
-```coffee
+```hashpipe
 #| $stories @ 10
 { by: 'zdw',
   id: 9052735,
@@ -165,7 +165,7 @@ Here's a full object to work with:
 
 Now let's use sub-expressions to make new objects out of specific attributes:
 
-```coffee
+```hashpipe
 #| $stories @ 10 . {title: .title}
 { title: 'Zero size objects' }
 
@@ -182,7 +182,7 @@ Sub-expressions work by taking a "template" object with keys and values (e.g. `{
 
 For extra convenience, when doing a single get operation where the key would match the value name (e.g. `title: .title`), the redundant expression can be omitted:
 
-```coffee
+```hashpipe
 #| $stories @ 10.{id: id, score: score}
 { id: 9052735, score: 48 }
 
@@ -192,7 +192,7 @@ For extra convenience, when doing a single get operation where the key would mat
 
 Sub-expressions may be nested within sub-expressions:
 
-```coffee
+```hashpipe
 #| $stories @ 10 . {basic: {id, title}}
 { basic: { id: 9052735, title: 'Zero size objects' } }
 
@@ -203,7 +203,7 @@ Sub-expressions may be nested within sub-expressions:
 
 Sub-expressions also offer a syntax for creating arrays:
 
-```coffee
+```hashpipe
 #| $stories @ 10 . [.id, .title]
 [ 9052735, 'Zero size objects', 48 ]
 
@@ -221,7 +221,7 @@ Perhaps you're under the suspicion that every highly rated HN story is submitted
 
 We now know how to fetch attributes from each item of an array, so let's get a big list of story submitters:
 
-```coffee
+```hashpipe
 #| $stories @ :by
 [ 'wglb',
   'zzzeek',
@@ -233,7 +233,7 @@ We now know how to fetch attributes from each item of an array, so let's get a b
 
 Hashpipe includes a builtin `count` command that takes an array of items and returns an array of items with counts:
 
-```coffee
+```hashpipe
 #| $stories @ :by | count
 [ ...
   { item: 'Reltair', count: 1 },
@@ -247,7 +247,7 @@ Hashpipe includes a builtin `count` command that takes an array of items and ret
 
 Right away we can see there may be some true power-submitters. But are they karma champions? Let's isolate the top 5 submitters' usernames.
 
-```coffee
+```hashpipe
 #| $stories @ :by | count | tail 5
 [ { item: 'desdiv', count: 2 },
   { item: 'boh', count: 2 },
@@ -265,7 +265,7 @@ Right away we can see there may be some true power-submitters. But are they karm
 
 Then we can use the HN API route `user/(username).json` to get data about each user:
 
-```coffee
+```hashpipe
 #| $usernames || http.get $hnapi/user/$!.json | set users
 [ { id: 'desdiv',
     karma: 828,
@@ -291,7 +291,7 @@ Then we can use the HN API route `user/(username).json` to get data about each u
 
 There's a lot of data in there (including the ID of every story and comment they've ever submitted). Maybe we should just look at each user's ID (username), karma, and number of submissions.
 
-```coffee
+```hashpipe
 #| $users @ :{id, karma, n_submitted: $(@submitted | length)}
 [ { id: 'desdiv',
     karma: 828,
@@ -316,7 +316,7 @@ There's something I forgot to mention earlier: sub-pipes can be used in place of
 
 *Note:* In the beginning of that sub-pipe the `@` is necessary to let Hashpipe know we're trying to use an at-expression again. Sub-pipes can consist of any other command: 
 
-```coffee
+```hashpipe
 #| $users @ :{id, karma, favorite_color: $( list red blue green | choice )}
 [ { id: 'desdiv',
     karma: 846,
@@ -337,7 +337,7 @@ There's something I forgot to mention earlier: sub-pipes can be used in place of
 
 Here's a more complex example, calculating the average karma per submission for each of these power-users:
 
-```coffee
+```hashpipe
 #| $users @ :{id, avg_karma: $( @[ karma, $( @submitted | length ) ] | / )}
 [ { id: 'desdiv',
     avg_karma: 3.021897810218978 },
@@ -350,21 +350,21 @@ Here's a more complex example, calculating the average karma per submission for 
 
 Broken down, that sub-pipe is first creating an array with the values [`karma`, `n_submissions`] ...
 
-```coffee
+```hashpipe
 #| $users @ 0. [ karma, $( @submitted | length ) ]
 [ 828, 274 ]
 ```
 
 ... and then passing this array to the `/` (division) command, which handles a piped-in array by dividing each item by the next ...
 
-```coffee
+```hashpipe
 #| [ 828, 274 ] | /
 3.021897810218978
 ```
 
 ... then bundled into a sub-expression.
 
-```coffee
+```hashpipe
 #| $users @ -1 . {id, avg_karma: $( @[ karma, $( @submitted | length ) ] | / ) }
 { id: 'lelf',
   avg_karma: 12.52463382157124 }
@@ -375,7 +375,7 @@ Unfortunately these numbers don't agree with HN's official averages on these use
 
 ### Counting story keywords
 
-```coffee
+```hashpipe
 #| $stories @ :title
 [ '64-bit Linux Return-Oriented Programming',
   'Asynchronous Python and Databases',
@@ -387,7 +387,7 @@ Unfortunately these numbers don't agree with HN's official averages on these use
 
 Using a parallel pipe we can send each item of this array to one command and get an array of results back. Let's normalize by applying the `lower` command to each title:
 
-```coffee
+```hashpipe
 #| $stories @ :title || lower 
 [ '64-bit linux return-oriented programming',
   'asynchronous python and databases',
@@ -399,7 +399,7 @@ Using a parallel pipe we can send each item of this array to one command and get
 
 Now by passing each lower-cased title to a `split` command, we can get an array of words per title:
 
-```coffee
+```hashpipe
 #| $stories @ :title || lower || split ' '
 [ [ '64-bit',
     'linux',
@@ -419,7 +419,7 @@ Now by passing each lower-cased title to a `split` command, we can get an array 
 
 And passing that whole array of arrays to the `flatten` command we can get a single array of words:
 
-```coffee
+```hashpipe
 #| $stories @ :title || lower || split ' ' | flatten
 [ '64-bit',
   'linux',
@@ -434,7 +434,7 @@ And passing that whole array of arrays to the `flatten` command we can get a sin
 
 Using the `count` command on that array of words:
 
-```coffee
+```hashpipe
 #| $stories @ :title || lower || split ' ' |  flatten | count
 [ ...
   { item: 'for', count: 9 },
@@ -450,7 +450,7 @@ As you might have expected, this isn't super useful information; the most common
 
 To make this sort of thing easier there's a module packaged with Hashpipe which includes a `keywords` command. It will handle normalizing the text, extracting actual words (not punctuation, numbers, etc.) and removing common English words.
 
-```coffee
+```hashpipe
 #| use keywords
 #| $stories @ :title || keywords
 [ [ 'bit',
@@ -483,7 +483,7 @@ To make this sort of thing easier there's a module packaged with Hashpipe which 
 
 We can be a bit more selective by using the `without` command to exclude some of the less interesting words (though it is interesting that so many words about time are prevalent).
 
-```coffee
+```hashpipe
 #| $stories @ :title || keywords | flatten | without yc hn ask show now end new time | count
 [ ...
   { item: 'hiring', count: 3 },
@@ -498,7 +498,7 @@ We can be a bit more selective by using the `without` command to exclude some of
 
 Every story has an array of comment IDs called `kids`. Comments are retreived from the API using the same `item/(id).json` route as earlier.
 
-```coffee
+```hashpipe
 #| $stories @ 10.kids
 [ 9054140, 9054088, 9053550, 9053989 ]
 
@@ -523,7 +523,7 @@ Every story has an array of comment IDs called `kids`. Comments are retreived fr
 
 This only gives us the top level of comments, fetching replies will require further requests for each reply ID in each comment's `kids` array.
 
-```coffee
+```hashpipe
 ```
 
 *To be continued...*

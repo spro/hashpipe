@@ -16,7 +16,7 @@ Featuring:
 
 ### Installation
 
-```coffee
+```hashpipe
 $ npm install -g hashpipe
 $ hashpipe
 #|
@@ -26,7 +26,7 @@ $ hashpipe
 
 Bash-like command pipelines
 
-```coffee
+```hashpipe
 #| use files
 #| files.cat names.txt | split '\n' | match John | sort
 [ 'John Adams',
@@ -37,7 +37,7 @@ Bash-like command pipelines
 
 [Parallel and series pipes](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md#pipelines) to map commands over arrays
 
-```coffee
+```hashpipe
 #| [1, 3, 4, 12] || * 5
 [ 5, 15, 20, 60 ]
 
@@ -47,7 +47,7 @@ Bash-like command pipelines
 
 Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md#at-expressions) for traversing JSON objects and arrays
 
-```coffee
+```hashpipe
 #| ['a', 'b', 'c'] @ 0
 'a'
 
@@ -60,7 +60,7 @@ Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md
 
 [Lambdas and named functions](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md#functions) for reusable pipelines
 
-```coffee
+```hashpipe
 #| [1, 2, 3] | map {| * 2 }
 [ 2, 4, 6 ]
 
@@ -74,7 +74,7 @@ Special [`@` syntax](https://github.com/spro/hashpipe/blob/master/docs/Syntax.md
 
 Designed for easy interaction with JSON APIs
 
-```coffee
+```hashpipe
 #| use http
 #| http.get http://www.telize.com/geoip
 { country: 'United States',

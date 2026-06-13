@@ -4,7 +4,7 @@ Modules add commands to hashpipe. A module is a TypeScript file in
 `src/modules/` that exports functions; `use <name>` loads it and registers
 each exported function as a command.
 
-```coffee
+```hashpipe
 #| use http
 'Using: http.get, http.post, ...'
 
@@ -36,7 +36,7 @@ export const replace: HashpipeFunction = (inp, args, ctx, cb) => {
 A synchronous `throw` inside a command is converted into a pipeline error,
 but prefer `cb(err)` — it's the contract everything else follows.
 
-```coffee
+```hashpipe
 #| use replace
 
 #| echo hello world | replace world there
@@ -48,7 +48,7 @@ but prefer `cb(err)` — it's the contract everything else follows.
 `use foo` loads `src/modules/foo` and registers every exported function as
 `foo.<exportName>`:
 
-```coffee
+```hashpipe
 #| use http        # exports get, post, ... → http.get, http.post, ...
 ```
 
@@ -106,7 +106,7 @@ export const slugify = wraponeSync(
 )
 ```
 
-```coffee
+```hashpipe
 #| use slugify
 
 #| echo Hello There World | slugify
@@ -150,7 +150,7 @@ export const twice: HashpipeFunction = (inp, args, ctx, cb) => {
 
 A miss lists everything that was attempted:
 
-```coffee
+```hashpipe
 #| use nope
 [ERROR] ... Module 'nope' not found. Tried: ~/.hashpipe/modules/nope,
 <bundled>/modules/nope, hashpipe-nope
@@ -158,7 +158,7 @@ A miss lists everything that was attempted:
 
 When a load shadows existing commands, `use` says so:
 
-```coffee
+```hashpipe
 #| use upper      # a module exporting its own upper
 'Using: upper (shadowing: upper)'
 ```

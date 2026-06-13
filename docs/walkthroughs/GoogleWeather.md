@@ -4,7 +4,7 @@ Today I noticed that my search results were feeling laggy, and wondered if it mi
 
 Let's start by figuring out where Google's servers live. Maybe getting an IP address would help.
 
-```coffee
+```hashpipe
 #| use exec
 #| exec.cmd "dig +short google.com"
 '74.125.224.7\n74.125.224.0\n74.125.224.14\n74.125.224.2\n...'
@@ -12,7 +12,7 @@ Let's start by figuring out where Google's servers live. Maybe getting an IP add
 
 By importing the `exec` module we can call the namespaced `exec.cmd` command to run system binaries for us. Using the system `dig +short` command we can then get Google's IP addresses. But this line-based format is archaic, let's turn it into an array:
 
-```coffee
+```hashpipe
 #| split '\n'
 [ '74.125.224.7',
   '74.125.224.0',
@@ -25,7 +25,7 @@ That's a bit easier on the eyes. Note that the last command's output will always
 
 Now let's grab the first IP result and save it:
 
-```coffee
+```hashpipe
 #| @ 0 | set ip
 '74.125.224.7'
 ```
@@ -34,7 +34,7 @@ Again using the last command's output, we use an `@`-expression to get the first
 
 So we have an IP address, but weather tends to be based on physical location. Luckily ip-api.com has a handy JSON API for geolocating IP addresses. Let's try that.
 
-```coffee
+```hashpipe
 #| http.get ip-api.com/json/$ip | set where
 { ip: '74.125.224.7',
   country: 'United States',
@@ -49,7 +49,7 @@ Perfect, a full location including coordinates. I piped the result right into `s
 
 From here we would just need... a JSON weather API that takes latitude & longitude? Lucky again, [openweathermap.org offers just that](https://openweathermap.org/current) (make sure to get an API key first):
 
-```coffee
+```hashpipe
 #| set key "asdf123"
 #| http.get api.openweathermap.org/data/2.5/weather {lat: $where @ lat, lon: $where @ lon, appid: $key} | set weather
 { main:
@@ -67,7 +67,7 @@ Notice the second argument to the `http.get` command is a JSON object, which wil
 
 Now we have what appears to be a firestorm on our hands with this 283 degree reading. It turns out this API returns temperature values as Kelvin, so to satisfy my feeble American mind a conversion is in order.
 
-```coffee
+```hashpipe
 #| alias k-to-f = - 273.15 | * 1.8 | + 32.0
 #| $weather @ main.temp | k-to-f
 50.36
@@ -79,7 +79,7 @@ That makes more sense. And it appears that it's a normal night in Mountain View,
 
 The full pipeline:
 
-```coffee
+```hashpipe
 #| use exec http
 #| set key "asdf123"
 #| alias k-to-f = - 273.15 | * 1.8 | + 32.0
@@ -89,7 +89,7 @@ The full pipeline:
 
 As an alias:
 
-```coffee
+```hashpipe
 #| alias server-temp = echo | exec.cmd "dig +short $!" | split '\n' | @ 0 | set ip | http.get ip-api.com/json/$ip | set where | http.get api.openweathermap.org/data/2.5/weather {lat: $where @ lat, lon: $where @ lon, appid: $key} @ main.temp | k-to-f
 
 #| server-temp news.ycombinator.com
