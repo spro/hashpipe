@@ -22,6 +22,13 @@ export interface AtExpression {
     depth?: number
 }
 
+interface SliceAccessor {
+    slice: {
+        start: number | null
+        end: number | null
+    }
+}
+
 export interface CommandToken {
     cmd?: any[]
     at?: AtExpression[]
@@ -831,12 +838,22 @@ function descendObj(
     }
 }
 
-function accessor(obj: any, key: string): any {
+function isSliceAccessor(key: any): key is SliceAccessor {
+    return isObject(key) && key.slice != null
+}
+
+function accessor(obj: any, key: any): any {
     if (key === ".") {
         return obj
     } else if (key === "*") {
         // Wildcard: all values of an object (or the items of an array)
         return Array.isArray(obj) ? obj.slice() : Object.values(obj)
+    } else if (isSliceAccessor(key)) {
+        if (obj == null || typeof obj.slice !== "function") {
+            return []
+        }
+        const { start, end } = key.slice
+        return obj.slice(start ?? undefined, end ?? undefined)
     } else {
         if (key.match(/^-?\d+/)) {
             let numKey = Number(key)

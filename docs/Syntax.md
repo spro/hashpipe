@@ -507,6 +507,20 @@ Negative indices count from the end, Python-style:
 'c'
 ```
 
+Slices use `start..end` with the end excluded, like JavaScript's `slice`
+method. Either side may be omitted, and negative bounds count from the end:
+
+```coffee
+#| ['a', 'b', 'c', 'd'] @ 1..3
+[ 'b', 'c' ]
+
+#| ['a', 'b', 'c', 'd'] @ ..2
+[ 'a', 'b' ]
+
+#| ['a', 'b', 'c', 'd'] @ -2..
+[ 'c', 'd' ]
+```
+
 ### Mapping with `:accessor`
 
 To access one key of an array of objects, we can use the `:` or *map* operator.
@@ -535,6 +549,13 @@ lists:
 ```coffee
 #| [[{n: 1}], [{n: 2}]] @ ::n
 [ [ 1 ], [ 2 ] ]
+```
+
+Slices can be mapped too:
+
+```coffee
+#| [[0, 1, 2], [3, 4, 5]] @ :1..
+[ [ 1, 2 ], [ 4, 5 ] ]
 ```
 
 ### Quoted keys and wildcards

@@ -139,6 +139,43 @@ describe("quoted keys and wildcards in at-expressions", () => {
     })
 })
 
+describe("slices in at-expressions", () => {
+    test("slices with explicit start and end", async () => {
+        const cmd = `[0, 1, 2, 3, 4] @ 1..3`
+        showParsed(cmd)
+        const result = await execScript(cmd)
+        expect(result).toEqual([1, 2])
+    })
+
+    test("slices from the beginning", async () => {
+        const result = await execScript(`[0, 1, 2, 3, 4] @ ..3`)
+        expect(result).toEqual([0, 1, 2])
+    })
+
+    test("slices to the end", async () => {
+        const result = await execScript(`[0, 1, 2, 3, 4] @ 2..`)
+        expect(result).toEqual([2, 3, 4])
+    })
+
+    test("slices with negative bounds", async () => {
+        const result = await execScript(`[0, 1, 2, 3, 4] @ -3..-1`)
+        expect(result).toEqual([2, 3])
+    })
+
+    test("slices chain after get accessors", async () => {
+        const result = await execScript(`{items: [0, 1, 2, 3, 4]} @ items.1..4`)
+        expect(result).toEqual([1, 2, 3])
+    })
+
+    test("slices can be mapped over nested lists", async () => {
+        const result = await execScript(`[[0, 1, 2], [3, 4, 5]] @ :1..`)
+        expect(result).toEqual([
+            [1, 2],
+            [4, 5],
+        ])
+    })
+})
+
 describe("${var} and typed substitution", () => {
     test("braced form splices without eating the suffix", async () => {
         const cmd = "$file = 'data.json' ; echo ${file}_v2"

@@ -44,19 +44,25 @@ at_obj = "{" space ss:(okv comma?)+ space "}" {
 
 at_quoted = q:quoted_literal { return q.quoted.join(''); }
 at_wild = "*" { return "*"; }
+at_int = s:"-"? ds:[0-9]+ { return Number((s || '') + ds.join('')); }
+at_slice = start:at_int? ".." end:at_int? {
+    return {slice: {start: start, end: end}};
+}
 
-section = at_obj / at_array / at_quoted / at_wild / at_word
+section = at_slice / at_obj / at_array / at_quoted / at_wild / at_word
 
 do_sub = (s:dot t:sub_cmd { return t; })
 do_sub_ = (s:dot? t:sub_cmd { return t; })
+do_slice = (s:dot t:at_slice { return {get: t}; })
+do_slice_ = (s:dot t:at_slice { return {get: t}; }) / (t:at_slice { return {get: t}; })
 do_get = (s:dot t:section { return {get: t}; })
 do_get_ = (s:dot? t:section { return {get: t}; }) / (s:dot { return {get: '.'}; })
 do_map = (s:col+ t:section { return {map: t, depth:s.length}; })
-do_section = do_get / do_map
+do_section = do_slice / do_get / do_map
 
 at_expression =
     space
-    head:(do_get_/do_sub_/do_map)
+    head:(do_slice_/do_get_/do_sub_/do_map)
     tail:do_section*
     hspace
     {
