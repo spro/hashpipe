@@ -1,7 +1,7 @@
 // HTTP Requests
 
 import * as url from "url"
-import { HashpipeFunction, Callback } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
 type ResponseParser = (res: Response, body: Buffer) => any | Promise<any>
 
@@ -77,70 +77,62 @@ function httpMethod(
     method: string,
     responseParser: ResponseParser = parseResponseData,
 ): HashpipeFunction {
-    return async (inp: any, args: any[], ctx: any, cb: Callback) => {
-        try {
-            const rawUrl = args[0]
-            if (typeof rawUrl !== "string" || rawUrl.length === 0) {
-                throw new Error("HTTP commands require a target URL")
-            }
-
-            const options: Record<string, any> = args[2] || {}
-            const headers: Record<string, string> = {
-                "user-agent": DEFAULT_USER_AGENT,
-                ...(options.headers ?? {}),
-            }
-
-            const auth = options.auth
-            if (auth?.username && auth?.password) {
-                const token = Buffer.from(
-                    `${auth.username}:${auth.password}`,
-                    "utf8",
-                ).toString("base64")
-                headers["authorization"] = `Basic ${token}`
-            }
-
-            const fetchOptions: Record<string, any> = {
-                method,
-                headers,
-                redirect: options.redirect,
-            }
-
-            const targetUrl =
-                method === "GET"
-                    ? applyQuery(fixUrl(rawUrl), args[1])
-                    : fixUrl(rawUrl)
-
-            const methodHasBody = !["GET", "HEAD"].includes(
-                method.toUpperCase(),
-            )
-            if (methodHasBody && inp !== undefined) {
-                if (Buffer.isBuffer(inp)) {
-                    fetchOptions.body = inp
-                } else if (inp instanceof ArrayBuffer) {
-                    fetchOptions.body = Buffer.from(inp)
-                } else if (ArrayBuffer.isView(inp)) {
-                    fetchOptions.body = Buffer.from(inp.buffer)
-                } else if (typeof inp === "object") {
-                    fetchOptions.body = JSON.stringify(inp)
-                    if (!headers["content-type"]) {
-                        headers["content-type"] = "application/json"
-                    }
-                } else {
-                    fetchOptions.body = String(inp)
-                }
-            }
-
-            const fetchImpl = resolveFetch()
-            const res = await fetchImpl(targetUrl, fetchOptions)
-            const arrayBuffer = await res.arrayBuffer()
-            const body = Buffer.from(arrayBuffer)
-            const parsed = await responseParser(res, body)
-
-            cb(null, parsed)
-        } catch (error) {
-            cb(error)
+    return command(async (inp: any, args: any[]) => {
+        const rawUrl = args[0]
+        if (typeof rawUrl !== "string" || rawUrl.length === 0) {
+            throw new Error("HTTP commands require a target URL")
         }
-    }
+
+        const options: Record<string, any> = args[2] || {}
+        const headers: Record<string, string> = {
+            "user-agent": DEFAULT_USER_AGENT,
+            ...(options.headers ?? {}),
+        }
+
+        const auth = options.auth
+        if (auth?.username && auth?.password) {
+            const token = Buffer.from(
+                `${auth.username}:${auth.password}`,
+                "utf8",
+            ).toString("base64")
+            headers["authorization"] = `Basic ${token}`
+        }
+
+        const fetchOptions: Record<string, any> = {
+            method,
+            headers,
+            redirect: options.redirect,
+        }
+
+        const targetUrl =
+            method === "GET"
+                ? applyQuery(fixUrl(rawUrl), args[1])
+                : fixUrl(rawUrl)
+
+        const methodHasBody = !["GET", "HEAD"].includes(method.toUpperCase())
+        if (methodHasBody && inp !== undefined) {
+            if (Buffer.isBuffer(inp)) {
+                fetchOptions.body = inp
+            } else if (inp instanceof ArrayBuffer) {
+                fetchOptions.body = Buffer.from(inp)
+            } else if (ArrayBuffer.isView(inp)) {
+                fetchOptions.body = Buffer.from(inp.buffer)
+            } else if (typeof inp === "object") {
+                fetchOptions.body = JSON.stringify(inp)
+                if (!headers["content-type"]) {
+                    headers["content-type"] = "application/json"
+                }
+            } else {
+                fetchOptions.body = String(inp)
+            }
+        }
+
+        const fetchImpl = resolveFetch()
+        const res = await fetchImpl(targetUrl, fetchOptions)
+        const arrayBuffer = await res.arrayBuffer()
+        const body = Buffer.from(arrayBuffer)
+        return responseParser(res, body)
+    })
 }
 
 // Export relevant methods

@@ -22,15 +22,7 @@ const expr = [{ get: "things" }, { map: "type", depth: 2 }]
 const expected_result = [["friend", "friend"], ["food"]]
 
 test("descend_test - deeply nested array traversal", async () => {
-    const result = await new Promise((resolve, reject) => {
-        at(test_input, expr, {}, (err: any, test_result: any) => {
-            if (err) {
-                reject(err)
-            } else {
-                resolve(test_result)
-            }
-        })
-    })
+    const result = await at(test_input, expr, {} as any)
 
     console.log("\nResult:\n", _inspect(result))
 

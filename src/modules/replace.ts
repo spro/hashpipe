@@ -1,5 +1,5 @@
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
-export const replace: HashpipeFunction = (inp, args, ctx, cb) => {
-    cb(null, inp.replace(args[0], args[1]))
-}
+export const replace: HashpipeFunction = command((inp, args) =>
+    inp.replace(args[0], args[1]),
+)

@@ -1,5 +1,5 @@
 import * as redis from "redis"
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command, isPromiseLike } from "../helpers"
 
 export function connect(config?: {
     port?: number
@@ -15,16 +15,22 @@ export function connect(config?: {
     redis_client.connect()
 
     const fns: Record<string, HashpipeFunction> = {
-        redis: (inp: any, args: any[], ctx: any, cb: any) => {
+        redis: command((inp: any, args: any[]) => {
             const method = args[0]
             const methodArgs = args.slice(1)
-            ;(redis_client as any)[method](
-                ...methodArgs,
-                (err: any, ret: any) => {
-                    cb(null, ret)
-                },
-            )
-        },
+            return new Promise((resolve, reject) => {
+                const result = (redis_client as any)[method](
+                    ...methodArgs,
+                    (err: any, ret: any) => {
+                        if (err) reject(err)
+                        else resolve(ret)
+                    },
+                )
+                if (isPromiseLike(result)) {
+                    result.then(resolve, reject)
+                }
+            })
+        }),
     }
 
     return fns

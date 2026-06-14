@@ -7,6 +7,7 @@ import * as builtins from "./builtins"
 import ansi from "ansi"
 import { prettyPrint } from "./helpers"
 import * as fs from "fs"
+import * as fsp from "fs/promises"
 import * as path from "path"
 import minimist from "minimist"
 import { formatDate } from "./utils/date-format"
@@ -80,30 +81,22 @@ class PipelineREPL {
         ansiCursor.reset()
     }
 
-    executeScript(script: string, cb?: () => void): void {
+    async executeScript(script: string): Promise<void> {
         const spinner = startSpinner()
         try {
-            this.pipeline.exec(
+            const data = await this.pipeline.exec(
                 script,
                 this.last_out,
                 this.context,
-                (err: Error | null, data?: any) => {
-                    spinner.stop()
-                    this.last_out = data
-                    // TODO: Some more advanced output handling,
-                    // trim long lists with some ellipses
-                    if (err != null) {
-                        this.writeError(err)
-                    } else {
-                        this.writeSuccess(data)
-                    }
-                    if (cb) cb()
-                },
             )
+            this.last_out = data
+            // TODO: Some more advanced output handling,
+            // trim long lists with some ellipses
+            this.writeSuccess(data)
         } catch (e) {
-            spinner.stop()
             this.writeError(e)
-            if (cb) cb()
+        } finally {
+            spinner.stop()
         }
     }
 
@@ -176,14 +169,23 @@ class PipelineREPL {
         }
 
         // Bootstrap history from file
-        loadHistory((err: Error | null, saved_history?: string[]) => {
-            if (saved_history) {
-                ;(rl as any).history.push.apply(
-                    (rl as any).history,
-                    saved_history,
-                )
-            }
+        loadHistory().then((saved_history) => {
+            ;(rl as any).history.push.apply((rl as any).history, saved_history)
         })
+
+        const runScript = async (script: string) => {
+            await repl.executeScript(script)
+            if (run_once) {
+                const script_exec = argv.exec || argv.e
+                if (script_exec) {
+                    await repl.executeScript(script_exec)
+                }
+                process.exit()
+            } else {
+                this.updatePrompt()
+                rl.prompt()
+            }
+        }
 
         this.updatePrompt()
         rl.prompt()
@@ -193,20 +195,10 @@ class PipelineREPL {
         rl.on("line", (script: string) => {
             script = script.trim()
             if (!script.length) script = "id"
-            repl.executeScript(script, () => {
-                if (run_once) {
-                    const script_exec = argv.exec || argv.e
-                    if (script_exec) {
-                        repl.executeScript(script_exec, () => {
-                            process.exit()
-                        })
-                    } else {
-                        process.exit()
-                    }
-                } else {
-                    this.updatePrompt()
-                    rl.prompt()
-                }
+            runScript(script).catch((err) => {
+                this.writeError(err)
+                this.updatePrompt()
+                rl.prompt()
             })
         })
 
@@ -276,15 +268,15 @@ function saveHistory(line: string): void {
     fs.appendFileSync(history_path, line + "\n")
 }
 
-function loadHistory(
-    cb: (err: Error | null, history?: string[]) => void,
-): void {
-    fs.readFile(history_path, (err, history_data) => {
-        if (!history_data) return cb(null, [])
-        const history_lines = history_data.toString().trim().split("\n")
-        history_lines.reverse()
-        cb(null, history_lines)
-    })
+async function loadHistory(): Promise<string[]> {
+    try {
+        const history_data = await fsp.readFile(history_path)
+        const content = history_data.toString().trim()
+        if (!content) return []
+        return content.split("\n").reverse()
+    } catch {
+        return []
+    }
 }
 
 // Going
@@ -305,10 +297,12 @@ if (require.main !== module) {
         const doRunScript = () => {
             // Execute single script
             const script = fs.readFileSync(script_run_filename).toString()
-            setTimeout(() => {
-                repl.executeScript(script, () => {
+            setTimeout(async () => {
+                try {
+                    await repl.executeScript(script)
+                } finally {
                     process.exit()
-                })
+                }
             }, 50)
         }
 
@@ -330,10 +324,12 @@ if (require.main !== module) {
         // Execute single script
         console.log(`Reading from ${script_load_filename}...`)
         const script = fs.readFileSync(script_load_filename).toString()
-        setTimeout(() => {
-            repl.executeScript(script, () => {
+        setTimeout(async () => {
+            try {
+                await repl.executeScript(script)
+            } finally {
                 repl.startReadline()
-            })
+            }
         }, 50)
     } else {
         repl.startReadline()

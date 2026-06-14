@@ -59,7 +59,9 @@ describe("error pipe |?", () => {
     })
 
     test("downstream stages continue after recovery", async () => {
-        const result = await execScript(`no-such-command |? val rescued | upper`)
+        const result = await execScript(
+            `no-such-command |? val rescued | upper`,
+        )
         expect(result).toEqual("RESCUED")
     })
 

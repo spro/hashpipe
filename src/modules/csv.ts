@@ -1,6 +1,6 @@
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
-export const json2csv: HashpipeFunction = (inp, args, ctx, cb) => {
+export const json2csv: HashpipeFunction = command((inp) => {
     const fields: string[] = []
 
     // First pass to get fields
@@ -24,5 +24,5 @@ export const json2csv: HashpipeFunction = (inp, args, ctx, cb) => {
 
     // Add fields header and join them together
     rows.unshift(fields.join(","))
-    cb(null, rows.join("\n"))
-}
+    return rows.join("\n")
+})

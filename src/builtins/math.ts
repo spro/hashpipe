@@ -1,5 +1,5 @@
-import type { Callback } from "../helpers"
 import type { HashpipeFunction } from "../helpers"
+import { command } from "../helpers"
 import { BuiltinMap, toNumber } from "./common"
 import { flattenOnce, isObject, isString } from "../utils/lang"
 
@@ -17,15 +17,11 @@ function combine(inp: any, args: any[]): any[] {
 }
 
 function reducer(op: (a: any, b: any) => any): HashpipeFunction {
-    return (inp: any, args: any[], ctx: any, cb: Callback) => {
-        cb(null, combine(inp, args).reduce(op))
-    }
+    return command((inp: any, args: any[]) => combine(inp, args).reduce(op))
 }
 
 const mathBuiltins: BuiltinMap = {
-    num: (inp, args, ctx, cb) => {
-        cb(null, toNumber(inp))
-    },
+    num: command((inp) => toNumber(inp)),
     "+": reducer((a, b) => toNumber(a) + toNumber(b)),
     "*": reducer((a, b) => toNumber(a) * toNumber(b)),
     "-": reducer((a, b) => toNumber(a) - toNumber(b)),

@@ -1,51 +1,36 @@
-import { Callback, Lambda } from "../helpers"
+import { Lambda, command } from "../helpers"
 import { BuiltinMap, resolveCallable, toBoolean } from "./common"
 
 // Core control-flow and simple value helpers.
 
 const coreBuiltins: BuiltinMap = {
-    id: (inp, args, ctx, cb) => {
-        cb(null, inp)
-    },
-    val: (inp, args, ctx, cb) => {
-        cb(null, args[0])
-    },
-    or: (inp, args, ctx, cb) => {
-        cb(null, inp || args[0])
-    },
-    echo: (inp, args, ctx, cb) => {
-        cb(null, args.join(" "))
-    },
-    key: (inp, args, ctx, cb) => {
-        cb(null, args.join(""))
-    },
-    null: (inp, args, ctx, cb) => {
-        cb(null, null)
-    },
-    if: (inp, args, ctx, cb: Callback) => {
+    id: command((inp) => inp),
+    val: command((inp, args) => args[0]),
+    or: command((inp, args) => inp || args[0]),
+    echo: command((inp, args) => args.join(" ")),
+    key: command((inp, args) => args.join("")),
+    null: command(() => null),
+    if: command((inp, args) => {
         const branch = toBoolean(args[0]) ? args[1] : args[2]
         // Lambda branches are lazy: only the taken branch ever runs
         if (branch instanceof Lambda) {
-            branch.call(inp, [], cb)
-        } else {
-            cb(null, branch)
+            return branch.call(inp, [])
         }
-    },
-    call: (inp, args, ctx, cb: Callback) => {
+        return branch
+    }),
+    call: command((inp, args, ctx) => {
         const callable = resolveCallable(args[0], ctx)
         if (!callable) {
-            return cb(`call: not a function: ${args[0]}`)
+            throw new Error(`call: not a function: ${args[0]}`)
         }
-        callable(inp, args.slice(1), cb)
-    },
-    case: (inp, args, ctx, cb) => {
+        return callable(inp, args.slice(1))
+    }),
+    case: command((inp, args) => {
         const key = args[0]
         const cases = args[1] || {}
-        cb(null, cases[key])
-    },
-    bool: (inp, args, ctx, cb) => {
-        cb(null, toBoolean(inp))
-    },
+        return cases[key]
+    }),
+    bool: command((inp) => toBoolean(inp)),
 }
 
 export default coreBuiltins

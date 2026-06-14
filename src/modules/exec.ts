@@ -1,5 +1,8 @@
 import { exec, spawn as spawnProcess } from "child_process"
-import { HashpipeFunction } from "../helpers"
+import { promisify } from "util"
+import { HashpipeFunction, command } from "../helpers"
+
+const execAsync = promisify(exec)
 
 const known_spawn =
     "ls cp mv ln ps grep awk sed find kill mkdir touch vim tmux th coffee node python pm2 npm git make ssh scp sudo".split(
@@ -9,7 +12,7 @@ const known_spawn =
 // Create exports for known spawn commands
 const spawnCommands: Record<string, HashpipeFunction> = {}
 known_spawn.forEach((k) => {
-    spawnCommands[k] = (inp: any, args: any[], ctx: any, cb: any) => {
+    spawnCommands[k] = command((inp: any, args: any[], ctx: any) => {
         if (process.stdin.setRawMode) process.stdin.setRawMode(false)
         ctx._readline?.pause()
         const child = spawnProcess(k, args, {
@@ -18,21 +21,29 @@ known_spawn.forEach((k) => {
             env: process.env,
         })
 
-        child.on("exit", (e, code) => {
-            if (process.stdin.setRawMode) process.stdin.setRawMode(true)
-            ctx._readline?.prompt()
-            cb(null)
+        return new Promise<void>((resolve, reject) => {
+            const restore = () => {
+                if (process.stdin.setRawMode) process.stdin.setRawMode(true)
+                ctx._readline?.prompt()
+            }
+            child.on("error", (err) => {
+                restore()
+                reject(err)
+            })
+            child.on("exit", () => {
+                restore()
+                resolve()
+            })
         })
-    }
+    })
 })
 
-export const cmd: HashpipeFunction = (inp, args, ctx, cb) => {
-    exec(args.join(" "), (err, stdout, stderr) => {
-        cb(null, stdout)
-    })
-}
+export const cmd: HashpipeFunction = command(async (inp, args) => {
+    const { stdout } = await execAsync(args.join(" "))
+    return stdout
+})
 
-export const spawn: HashpipeFunction = (inp, args, ctx, cb) => {
+export const spawn: HashpipeFunction = command((inp, args, ctx) => {
     if (process.stdin.setRawMode) process.stdin.setRawMode(false)
     ctx._readline?.pause()
 
@@ -47,18 +58,21 @@ export const spawn: HashpipeFunction = (inp, args, ctx, cb) => {
         env: process.env,
     })
 
-    child.on("error", (err) => {
-        if (process.stdin.setRawMode) process.stdin.setRawMode(true)
-        ctx._readline?.prompt()
-        cb(err)
+    return new Promise<void>((resolve, reject) => {
+        const restore = () => {
+            if (process.stdin.setRawMode) process.stdin.setRawMode(true)
+            ctx._readline?.prompt()
+        }
+        child.on("error", (err) => {
+            restore()
+            reject(err)
+        })
+        child.on("exit", () => {
+            restore()
+            resolve()
+        })
     })
-
-    child.on("exit", (e, code) => {
-        if (process.stdin.setRawMode) process.stdin.setRawMode(true)
-        ctx._readline?.prompt()
-        cb(null)
-    })
-}
+})
 
 // Export all spawn commands
 Object.assign(exports, spawnCommands)

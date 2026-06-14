@@ -1,27 +1,27 @@
 import { BuiltinMap } from "./common"
+import { command } from "../helpers"
 import { formatDate } from "../utils/date-format"
 
 // Time helpers for scheduling and timestamps.
 
 const timeBuiltins: BuiltinMap = {
-    sleep: (inp, args, ctx, cb) => {
-        setTimeout(() => cb(null, inp), Number(args[0]))
-    },
-    now: (inp, args, ctx, cb) => {
-        cb(null, new Date())
-    },
-    timestamp: (inp, args, ctx, cb) => {
-        cb(null, new Date().getTime())
-    },
-    "oid-timestamp": (inp, args, ctx, cb) => {
+    sleep: command(
+        (inp, args) =>
+            new Promise((resolve) => {
+                setTimeout(() => resolve(inp), Number(args[0]))
+            }),
+    ),
+    now: command(() => new Date()),
+    timestamp: command(() => new Date().getTime()),
+    "oid-timestamp": command((inp, args) => {
         const value = (args[0] || inp).toString().substring(0, 8)
-        cb(null, parseInt(value, 16) * 1000)
-    },
-    "format-date": (inp, args, ctx, cb) => {
+        return parseInt(value, 16) * 1000
+    }),
+    "format-date": command((inp, args) => {
         const value = inp ?? new Date()
         const pattern = args[0] || "YYYY-MM-DD HH:mm:ss"
-        cb(null, formatDate(value, pattern))
-    },
+        return formatDate(value, pattern)
+    }),
 }
 
 export default timeBuiltins

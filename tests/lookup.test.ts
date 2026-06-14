@@ -35,8 +35,7 @@ describe("command lookup order", () => {
     test("a module-loaded fn shadows a builtin", async () => {
         const pipe = new Pipeline()
         pipe.use({
-            upper: (inp: any, args: any[], ctx: any, cb: any) =>
-                cb(null, "from-module"),
+            upper: async () => "from-module",
         })
         const result = await execPipeline(pipe, `echo hi | upper`, {
             ctx: pipe.subScope({ vars: {} }),

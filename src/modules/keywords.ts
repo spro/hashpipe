@@ -1,6 +1,6 @@
 // Keywords and counting
 
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
 const stopwords = new RegExp(
     "\\b" +
@@ -17,31 +17,25 @@ function strip_html(s: string): string {
     return s.replace(/<(?:.|\n)*?>/gm, "")
 }
 
-export const strip_html_cmd: HashpipeFunction = (inp, args, ctx, cb) => {
-    cb(null, strip_html(inp))
-}
+export const strip_html_cmd: HashpipeFunction = command((inp) =>
+    strip_html(inp),
+)
 
 // "text" -> keywords -> ["keyword"]
-export const keywords: HashpipeFunction = (inp, args, ctx, cb) => {
-    const keywords_list = strip_html(inp.toLowerCase())
+export const keywords: HashpipeFunction = command((inp) =>
+    strip_html(inp.toLowerCase())
         .replace(stopwords, "")
         .replace(/\s+/, " ")
-        .match(/[a-z']{2,}/g)
-    cb(null, keywords_list)
-}
+        .match(/[a-z']{2,}/g),
+)
 
 // "text" -> words -> ["word"]
-export const words: HashpipeFunction = (inp, args, ctx, cb) => {
-    cb(null, inp.match(/[\w']{2,}/g))
-}
+export const words: HashpipeFunction = command((inp) => inp.match(/[\w']{2,}/g))
 
 // "text" -> slugify -> "slug"
-export const slugify: HashpipeFunction = (inp, args, ctx, cb) => {
-    cb(
-        null,
-        inp
-            .toLowerCase()
-            .replace(/\W+/g, "-")
-            .replace(/^\W?(.+)\W$/, "$1"),
-    )
-}
+export const slugify: HashpipeFunction = command((inp) =>
+    inp
+        .toLowerCase()
+        .replace(/\W+/g, "-")
+        .replace(/^\W?(.+)\W$/, "$1"),
+)

@@ -1,1 +1,1 @@
-{"version":3,"file":"stats.d.ts","sourceRoot":"","sources":["../../src/modules/stats.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,gBAAgB,EAAE,MAAM,YAAY,CAAA;AAE7C,eAAO,MAAM,MAAM,EAAE,gBAEpB,CAAA"}
+{"version":3,"file":"stats.d.ts","sourceRoot":"","sources":["../../src/modules/stats.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,gBAAgB,EAAW,MAAM,YAAY,CAAA;AAEtD,eAAO,MAAM,MAAM,EAAE,gBAEpB,CAAA"}

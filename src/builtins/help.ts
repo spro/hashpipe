@@ -1,5 +1,6 @@
 import { inspect } from "util"
 import type { BuiltinMap } from "./common"
+import { command } from "../helpers"
 import core from "./core"
 import math from "./math"
 import strings from "./strings"
@@ -27,8 +28,7 @@ export interface HelpSection {
     examples?: HelpExample[]
 }
 
-const DOCS_URL =
-    "https://github.com/spro/hashpipe/blob/master/docs/Syntax.md"
+const DOCS_URL = "https://github.com/spro/hashpipe/blob/master/docs/Syntax.md"
 
 export class HelpPage {
     constructor(
@@ -194,9 +194,7 @@ function buildHelpPage(ctx: any): HelpPage {
 }
 
 const helpBuiltins: BuiltinMap = {
-    help: (inp, args, ctx, cb) => {
-        cb(null, buildHelpPage(ctx))
-    },
+    help: command((inp, args, ctx) => buildHelpPage(ctx)),
 }
 
 categories.push(["help", helpBuiltins])

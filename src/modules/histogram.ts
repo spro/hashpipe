@@ -1,4 +1,4 @@
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
 function padded(s: string, n: number = 40): string {
     return make_padding(n - s.length) + s
@@ -26,6 +26,6 @@ function make_histogram(l: any[], x: string = "#"): string {
     return rows.join("\n")
 }
 
-export const histogram: HashpipeFunction = (inp, args, ctx, cb) => {
-    cb(null, make_histogram(inp || args[0]))
-}
+export const histogram: HashpipeFunction = command((inp, args) =>
+    make_histogram(inp || args[0]),
+)

@@ -1,4 +1,4 @@
-import { Callback, HashpipeFunction, Lambda } from "./helpers";
+import { HashpipeFunction, Lambda } from "./helpers";
 export interface AtExpression {
     get?: any;
     map?: any;
@@ -50,13 +50,13 @@ export declare class Pipeline extends Scope {
     use(fns: string | Record<string, HashpipeFunction>): this;
     getLastRegisteredFns(): string[];
     getLastShadowedFns(): string[];
-    exec(script: string, inp?: any, ctx?: any, cb?: Callback): Scope;
-    execFile(script_filename: string, inp: any, ctx: any, cb: Callback): void;
+    exec(script: string, inp?: any, ctx?: Scope): Promise<any>;
+    execFile(script_filename: string, inp: any, ctx?: Scope): Promise<any>;
 }
 export declare function parsePipelines(cmd: string): any[];
-export declare function runPipeline(_cmd_tokens: CommandToken[], inp: any, ctx: Scope, final_cb: Callback): void;
-export type PipeHandler = (inp: any, ctx: Scope, runStage: (inp: any, cb: Callback) => void, cb: Callback) => void;
+export declare function runPipeline(_cmd_tokens: CommandToken[], inp: any, ctx: Scope): Promise<any>;
+export type PipeHandler = (inp: any, ctx: Scope, runStage: (inp: any) => Promise<any>) => Promise<any>;
 export declare function registerPipeOperator(op: string, handler: PipeHandler): void;
-export declare function doCmd(_args: any[], inp: any, ctx: Scope, cb: Callback): void;
-export declare function at(inp: any, expr: AtExpression[], ctx: Scope, cb: Callback): void;
+export declare function doCmd(_args: any[], inp: any, ctx: Scope): Promise<any>;
+export declare function at(inp: any, expr: AtExpression[], ctx: Scope): Promise<any>;
 //# sourceMappingURL=pipeline.d.ts.map

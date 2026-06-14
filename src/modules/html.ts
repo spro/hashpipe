@@ -1,22 +1,21 @@
 import { JSDOM } from "jsdom"
 import jquery from "jquery"
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
 // "html" -> html2text -> "text"
-export const html2text: HashpipeFunction = (inp, args, ctx, cb) => {
+export const html2text: HashpipeFunction = command((inp) => {
     const dom = new JSDOM(inp)
     const $ = jquery(dom.window as any) as any
-    const text = $("h1, h2, h3, p")
+    return $("h1, h2, h3, p")
         .map(function (this: any) {
             return $(this).text()
         })
         .get()
         .join(" ... ")
-    cb(null, text)
-}
+})
 
 // "html" -> jq "selectors" -> [json elements]
-export const jq: HashpipeFunction = (inp, args, ctx, cb) => {
+export const jq: HashpipeFunction = command((inp, args) => {
     const dom = new JSDOM(inp)
     const $ = jquery(dom.window as any) as any
     const els: any[] = []
@@ -35,5 +34,5 @@ export const jq: HashpipeFunction = (inp, args, ctx, cb) => {
         els.push(el_json)
     })
 
-    cb(null, els)
-}
+    return els
+})

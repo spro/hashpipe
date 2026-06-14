@@ -1,5 +1,5 @@
 import type { BuiltinMap } from "./common"
-import { Lambda } from "../helpers"
+import { Lambda, command } from "../helpers"
 
 // Introspection and escape hatches for the scope-first lookup order.
 // The full builtin map is resolved lazily to avoid a load-time cycle
@@ -12,16 +12,18 @@ function allBuiltins(): BuiltinMap {
 const metaBuiltins: BuiltinMap = {
     // Run a builtin directly, bypassing any def/alias/module that
     // shadows it (like bash's `builtin`)
-    builtin: (inp, args, ctx, cb) => {
+    builtin: command((inp, args, ctx) => {
         const [name, ...rest] = args
         const fn = allBuiltins()[name]
-        if (!fn) return cb(`No builtin ${name}. `)
-        fn(inp, rest, ctx, cb)
-    },
+        if (!fn) {
+            throw new Error(`No builtin ${name}. `)
+        }
+        return fn(inp, rest, ctx)
+    }),
 
     // Report where a name resolves: def, alias, module, or builtin
     // (like bash's `type`)
-    which: (inp, args, ctx, cb) => {
+    which: command((inp, args, ctx) => {
         const name = args.length ? String(args[0]) : String(inp)
         const fn = ctx.get("fns", name)
         const aliasSrc = ctx.get("aliases", name)
@@ -38,11 +40,11 @@ const metaBuiltins: BuiltinMap = {
                 result.type = "module"
             }
             if (isBuiltin) result.shadows = "builtin"
-            return cb(null, result)
+            return result
         }
-        if (isBuiltin) return cb(null, { command: name, type: "builtin" })
-        cb(`No command ${name}. `)
-    },
+        if (isBuiltin) return { command: name, type: "builtin" }
+        throw new Error(`No command ${name}. `)
+    }),
 }
 
 export default metaBuiltins

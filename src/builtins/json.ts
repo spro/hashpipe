@@ -1,14 +1,11 @@
 import { BuiltinMap } from "./common"
+import { command } from "../helpers"
 
 // JSON encode/decode helpers used across modules.
 
 const jsonBuiltins: BuiltinMap = {
-    parse: (inp, args, ctx, cb) => {
-        cb(null, JSON.parse(inp))
-    },
-    stringify: (inp, args, ctx, cb) => {
-        cb(null, JSON.stringify(inp))
-    },
+    parse: command((inp) => JSON.parse(inp)),
+    stringify: command((inp) => JSON.stringify(inp)),
 }
 
 export default jsonBuiltins

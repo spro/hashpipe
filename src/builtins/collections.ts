@@ -1,6 +1,5 @@
-import * as async from "async"
-import { Callback, Lambda, wrapall } from "../helpers"
-import { BuiltinMap, resolveCallable, toNumber } from "./common"
+import { Lambda, command, wrapall } from "../helpers"
+import { BuiltinMap, Callable, resolveCallable, toNumber } from "./common"
 
 // Array/object construction, traversal, and aggregation helpers.
 
@@ -100,30 +99,14 @@ function shuffleList(list: any[]): any[] {
     return copy
 }
 
-const list = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
-    cb(null, args)
-}
+const callCallable = (callable: Callable, inp: any, args: any[] = []) =>
+    Promise.resolve(callable(inp, args))
 
-const obj = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
-    cb(null, buildObjectFromArgs(args))
-}
+const list = command((inp, args) => args)
 
-const range = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const obj = command((inp, args) => buildObjectFromArgs(args))
+
+const range = command((inp, args) => {
     let start: number
     let end: number
     if (args.length === 2) {
@@ -137,79 +120,36 @@ const range = (
     for (let i = start; i <= end; i++) {
         values.push(i)
     }
-    cb(null, values)
-}
+    return values
+})
 
-const length = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
-    cb(null, inp.length)
-}
+const length = command((inp) => inp.length)
 
-const reverse = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const reverse = command((inp) => {
     if (typeof inp === "string") {
-        cb(null, inp.split("").reverse().join(""))
-    } else {
-        cb(null, inp.slice().reverse())
+        return inp.split("").reverse().join("")
     }
-}
+    return inp.slice().reverse()
+})
 
-const head = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const head = command((inp: any[], args) => {
     const count = args[0] || 50
-    cb(null, inp.slice(0, count))
-}
+    return inp.slice(0, count)
+})
 
-const tail = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const tail = command((inp: any[], args) => {
     const count = args[0] || 50
     if (count < 1) {
-        cb(null, [])
-    } else {
-        cb(null, inp.slice(Math.max(inp.length - count, 0)))
+        return []
     }
-}
+    return inp.slice(Math.max(inp.length - count, 0))
+})
 
-const join = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
-    cb(null, inp.join(args[0] || " "))
-}
+const join = command((inp: any[], args) => inp.join(args[0] || " "))
 
-const split = (
-    inp: string,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
-    cb(null, inp.split(args[0] || "\n"))
-}
+const split = command((inp: string, args) => inp.split(args[0] || "\n"))
 
-const match = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const match = command((inp, args) => {
     let source = inp
     let pattern: string = args[0]
     if (args.length === 2) {
@@ -221,109 +161,66 @@ const match = (
     for (const item of source) {
         if (regex.test(item)) matched.push(item)
     }
-    cb(null, matched)
-}
+    return matched
+})
 
-const filter = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const filter = command(async (inp: any[], args, ctx) => {
     const callable = resolveCallable(args[0], ctx)
     if (callable) {
         const rest = args.slice(1)
-        async.map(
-            inp,
-            (item: any, _cb: Callback) => callable(item, rest, _cb),
-            (err: any, keeps?: any[]) => {
-                if (err) return cb(err)
-                cb(
-                    null,
-                    inp.filter((_, i) => keeps![i]),
-                )
-            },
+        const keeps = await Promise.all(
+            inp.map((item) => callCallable(callable, item, rest)),
         )
-    } else if (args.length > 0) {
+        return inp.filter((_, i) => keeps[i])
+    }
+    if (args.length > 0) {
         // Legacy: a raw JavaScript expression over `i`
         const filterCode = "return (" + args.join(" ") + ");"
         const filterFn = new Function("i", filterCode) as (item: any) => boolean
-        cb(null, inp.filter(filterFn))
-    } else {
-        cb(null, inp.filter(Boolean))
+        return inp.filter(filterFn)
     }
-}
+    return inp.filter(Boolean)
+})
 
-const map = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const map = command(async (inp: any[], args, ctx) => {
     const callable = resolveCallable(args[0], ctx)
     if (!callable) {
-        return cb(`map: not a lambda or command name: ${args[0]}`)
+        throw new Error(`map: not a lambda or command name: ${args[0]}`)
     }
     const rest = args.slice(1)
-    async.map(inp, (item: any, _cb: Callback) => callable(item, rest, _cb), cb)
-}
+    return Promise.all(inp.map((item) => callCallable(callable, item, rest)))
+})
 
-const each = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const each = command(async (inp: any[], args, ctx) => {
     const callable = resolveCallable(args[0], ctx)
     if (!callable) {
-        return cb(`each: not a lambda or command name: ${args[0]}`)
+        throw new Error(`each: not a lambda or command name: ${args[0]}`)
     }
     const rest = args.slice(1)
-    async.mapSeries(
-        inp,
-        (item: any, _cb: Callback) => callable(item, rest, _cb),
-        (err: any) => {
-            if (err) return cb(err)
-            cb(null, inp)
-        },
-    )
-}
+    for (const item of inp) {
+        await callCallable(callable, item, rest)
+    }
+    return inp
+})
 
-const reduce = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const reduce = command(async (inp: any[], args, ctx) => {
     const callable = resolveCallable(args[0], ctx)
     if (!callable) {
-        return cb(`reduce: not a lambda or command name: ${args[0]}`)
+        throw new Error(`reduce: not a lambda or command name: ${args[0]}`)
     }
     const items = inp.slice()
-    const memo = args.length > 1 ? args[1] : items.shift()
-    async.reduce(
-        items,
-        memo,
-        (acc: any, item: any, _cb: Callback) => callable(acc, [item], _cb),
-        cb,
-    )
-}
+    let memo = args.length > 1 ? args[1] : items.shift()
+    for (const item of items) {
+        memo = await callCallable(callable, memo, [item])
+    }
+    return memo
+})
 
 // Map items to keys through a lambda, asynchronously
-const lambdaKeys = (
-    inp: any[],
-    lam: Lambda,
-    cb: (err: any, keys?: any[]) => void,
-) => {
-    async.map(inp, (item: any, _cb: Callback) => lam.call(item, [], _cb), cb)
-}
+const lambdaKeys = (inp: any[], lam: Lambda): Promise<any[]> =>
+    Promise.all(inp.map((item) => lam.call(item, [])))
 
-const sort = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const sort = command((inp: any[], args) => {
     const copy = inp.slice()
     let iteratee = args[0]
     if (iteratee) {
@@ -342,15 +239,10 @@ const sort = (
     } else {
         copy.sort()
     }
-    cb(null, copy)
-}
+    return copy
+})
 
-const count = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const count = command((inp: any[], args) => {
     const iteratee = args[0]
     const counts = new Map<any, { item: any; count: number }>()
     for (const item of inp) {
@@ -362,23 +254,14 @@ const count = (
             counts.set(key, { item, count: 1 })
         }
     }
-    cb(
-        null,
-        Array.from(counts.values()).sort((a, b) => a.count - b.count),
-    )
-}
+    return Array.from(counts.values()).sort((a, b) => a.count - b.count)
+})
 
-const bin = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const bin = command((inp: any[], args) => {
     const binCount = Number(args[0]) || 0
     const key = args[1]
     if (binCount <= 0) {
-        cb(null, [])
-        return
+        return []
     }
     const extractor =
         key != null ? (item: any) => item[key] : (item: any) => item
@@ -391,8 +274,7 @@ const bin = (
         if (max == null || value > max) max = value
     }
     if (min == null || max == null) {
-        cb(null, [])
-        return
+        return []
     }
     const bins: any[] = []
     const epsilon = 1e-9
@@ -413,15 +295,10 @@ const bin = (
         bins[index].items.push(item)
         bins[index].count += 1
     }
-    cb(null, bins)
-}
+    return bins
+})
 
-const chunks = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const chunks = command((inp: any[], args) => {
     const chunkSize = args[0] || 10
     const result: any[][] = []
     for (let i = 0; i < inp.length; i++) {
@@ -429,35 +306,18 @@ const chunks = (
         if (!result[index]) result[index] = []
         result[index].push(inp[i])
     }
-    cb(null, result)
-}
+    return result
+})
 
-const slice = (
-    inp: any[],
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const slice = command((inp: any[], args) => {
     const start = args[0] || 0
     const end = args[1] || inp.length
-    cb(null, inp.slice(start, end))
-}
+    return inp.slice(start, end)
+})
 
-const zip = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
-    cb(null, zipArgs(args))
-}
+const zip = command((inp, args) => zipArgs(args))
 
-const zipobj = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: (err: any, result?: any) => void,
-) => {
+const zipobj = command((inp, args) => {
     const zipped = zipArgs(args)
     const result: AnyRecord = {}
     for (const [key, value] of zipped) {
@@ -465,8 +325,8 @@ const zipobj = (
             result[key] = value
         }
     }
-    cb(null, result)
-}
+    return result
+})
 
 const collectionHelpers = {
     keys: (obj: AnyRecord) => Object.keys(Object(obj)),
@@ -591,40 +451,31 @@ Object.assign(collectionsBuiltins, wrapall(collectionHelpers, "", true, true))
 // key extractor. Bare command names stay strings here so object keys that
 // happen to match a command are never misread as callables.
 
-collectionsBuiltins.sortBy = (inp, args, ctx, cb) => {
+collectionsBuiltins.sortBy = command(async (inp, args) => {
     if (args[0] instanceof Lambda) {
-        lambdaKeys(inp, args[0], (err, keys) => {
-            if (err) return cb(err)
-            const paired = inp.map((item: any, i: number) => [keys![i], item])
-            paired.sort((a: any[], b: any[]) => {
-                if (a[0] === b[0]) return 0
-                return a[0] > b[0] ? 1 : -1
-            })
-            cb(
-                null,
-                paired.map((pair: any[]) => pair[1]),
-            )
+        const keys = await lambdaKeys(inp, args[0])
+        const paired = inp.map((item: any, i: number) => [keys[i], item])
+        paired.sort((a: any[], b: any[]) => {
+            if (a[0] === b[0]) return 0
+            return a[0] > b[0] ? 1 : -1
         })
-    } else {
-        cb(null, collectionHelpers.sortBy(inp, args[0]))
+        return paired.map((pair: any[]) => pair[1])
     }
-}
+    return collectionHelpers.sortBy(inp, args[0])
+})
 
-collectionsBuiltins.groupBy = (inp, args, ctx, cb) => {
+collectionsBuiltins.groupBy = command(async (inp, args) => {
     if (args[0] instanceof Lambda) {
-        lambdaKeys(inp, args[0], (err, keys) => {
-            if (err) return cb(err)
-            const groups: Record<string, any[]> = {}
-            inp.forEach((item: any, i: number) => {
-                const key = String(keys![i])
-                if (!groups[key]) groups[key] = []
-                groups[key].push(item)
-            })
-            cb(null, groups)
+        const keys = await lambdaKeys(inp, args[0])
+        const groups: Record<string, any[]> = {}
+        inp.forEach((item: any, i: number) => {
+            const key = String(keys[i])
+            if (!groups[key]) groups[key] = []
+            groups[key].push(item)
         })
-    } else {
-        cb(null, collectionHelpers.groupBy(inp, args[0]))
+        return groups
     }
-}
+    return collectionHelpers.groupBy(inp, args[0])
+})
 
 export default collectionsBuiltins

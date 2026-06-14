@@ -26,17 +26,17 @@ const npmPkgDir = path.join(process.cwd(), "node_modules", "hashpipe-testmod")
 beforeAll(() => {
     fs.writeFileSync(
         path.join(fixtureDir, "greeter.js"),
-        `exports.hello = (inp, args, ctx, cb) => cb(null, "hello " + (args[0] || inp))\n`,
+        `exports.hello = async (inp, args) => "hello " + (args[0] || inp)\n`,
     )
     // Shadows the bundled http module when fixtureDir is on HASHPIPE_PATH
     fs.writeFileSync(
         path.join(fixtureDir, "http.js"),
-        `exports.marker = (inp, args, ctx, cb) => cb(null, "from-hashpipe-path")\n`,
+        `exports.marker = async () => "from-hashpipe-path"\n`,
     )
     // Bare-name export shadowing a builtin
     fs.writeFileSync(
         path.join(fixtureDir, "upper.js"),
-        `exports.upper = (inp, args, ctx, cb) => cb(null, "shadowed-by-module")\n`,
+        `exports.upper = async () => "shadowed-by-module"\n`,
     )
     fs.mkdirSync(npmPkgDir, { recursive: true })
     fs.writeFileSync(
@@ -45,7 +45,7 @@ beforeAll(() => {
     )
     fs.writeFileSync(
         path.join(npmPkgDir, "index.js"),
-        `exports.ping = (inp, args, ctx, cb) => cb(null, "pong")\n`,
+        `exports.ping = async () => "pong"\n`,
     )
 })
 
@@ -104,7 +104,7 @@ describe("module search path", () => {
         fs.mkdirSync(pkgDir, { recursive: true })
         fs.writeFileSync(
             path.join(pkgDir, "index.js"),
-            `exports.wave = (inp, args, ctx, cb) => cb(null, "wave!")\n`,
+            `exports.wave = async () => "wave!"\n`,
         )
         const result = await execFresh(`use ${pkgDir} ; waver.wave`)
         expect(result).toEqual("wave!")
@@ -137,9 +137,7 @@ describe("shadow reporting", () => {
     test("the shadowing module wins; builtin still reachable", async () => {
         process.env.HASHPIPE_PATH = fixtureDir
         try {
-            const result = await execFresh(
-                `use upper ; echo hi | upper`,
-            )
+            const result = await execFresh(`use upper ; echo hi | upper`)
             expect(result).toEqual("shadowed-by-module")
             const original = await execFresh(
                 `use upper ; echo hi | builtin upper`,

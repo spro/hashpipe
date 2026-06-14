@@ -1,6 +1,6 @@
 import * as statistics from "simple-statistics"
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
-export const linreg: HashpipeFunction = (inp, args, ctx, cb) => {
-    cb(null, statistics.linearRegression(inp))
-}
+export const linreg: HashpipeFunction = command((inp) =>
+    statistics.linearRegression(inp),
+)

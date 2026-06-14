@@ -21,30 +21,18 @@ export const runHashpipeFn = (
     input: any,
     args: any[] = [],
     ctx: any = {},
-): Promise<any> =>
-    new Promise((resolve, reject) => {
-        fn(input, args, ctx, (err, result) => {
-            if (err) reject(err)
-            else resolve(result)
-        })
-    })
+): Promise<any> => Promise.resolve(fn(input, args, ctx))
 
 export const execPipeline = (
     pipe: any,
     script: string,
     { input, ctx }: ExecOptions = {},
-): Promise<any> =>
-    new Promise((resolve, reject) => {
-        const done = (err: any, result: any) => {
-            if (err) reject(err)
-            else resolve(result)
-        }
-
-        if (ctx !== undefined) {
-            pipe.exec(script, input, ctx, done)
-        } else if (input !== undefined) {
-            pipe.exec(script, input, done)
-        } else {
-            pipe.exec(script, done)
-        }
-    })
+): Promise<any> => {
+    if (ctx !== undefined) {
+        return pipe.exec(script, input, ctx)
+    }
+    if (input !== undefined) {
+        return pipe.exec(script, input)
+    }
+    return pipe.exec(script)
+}

@@ -1,7 +1,7 @@
 import * as xml2js from "xml2js"
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
-export const xml2js_cmd: HashpipeFunction = (inp, args, ctx, cb) => {
+export const xml2js_cmd: HashpipeFunction = command((inp) => {
     const parser = new xml2js.Parser()
-    parser.parseString(inp, cb as any)
-}
+    return parser.parseStringPromise(inp)
+})

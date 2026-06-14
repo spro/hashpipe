@@ -1,11 +1,10 @@
 const grammar = require("./grammar")
 import * as builtins from "./builtins"
-import * as async from "async"
 import * as fs from "fs"
 import { inspect as utilInspect } from "util"
 import { cloneShallow, isFunction, isObject, isString } from "./utils/lang"
 import { loadModule } from "./module-loader"
-import { Callback, HashpipeFunction, Lambda, setLambdaRunner } from "./helpers"
+import { HashpipeFunction, Lambda, setLambdaRunner } from "./helpers"
 
 const DEBUG = false
 
@@ -208,41 +207,25 @@ export class Pipeline extends Scope {
         return this.lastShadowedFns.slice()
     }
 
-    // Execute a pipeline given a command string, input object,
-    // context and callback. An empty context object is created
-    // if none is given.
-
-    // exec(script, cb)
-    // exec(script, inp, cb)
-    // exec(script, inp, ctx, cb)
-
-    exec(script: string, inp?: any, ctx?: any, cb?: Callback): Scope {
-        // Handle overloaded signatures
-        if (cb == null) {
-            cb = ctx as Callback
-            ctx = this.subScope()
-        }
-        if (cb == null) {
-            cb = inp as Callback
-            inp = null
-        }
-
+    // Execute a pipeline given a command string, optional input object,
+    // and optional context. An empty child context is created if none is given.
+    async exec(script: string, inp: any = null, ctx?: Scope): Promise<any> {
+        const runCtx = ctx ?? this.subScope()
         try {
             const pipelines = parsePipelines(script)
-            try {
-                runPipelines(pipelines, inp, ctx, cb)
-            } catch (e) {
-                cb("Error executing pipeline: " + e)
-            }
+            return await runPipelines(pipelines, inp, runCtx)
         } catch (e) {
-            cb("Error parsing pipeline: " + e)
+            throw "Error parsing pipeline: " + e
         }
-        return ctx
     }
 
-    execFile(script_filename: string, inp: any, ctx: any, cb: Callback): void {
+    async execFile(
+        script_filename: string,
+        inp: any,
+        ctx?: Scope,
+    ): Promise<any> {
         const script = fs.readFileSync(script_filename).toString()
-        this.exec(script, inp, ctx, cb)
+        return this.exec(script, inp, ctx)
     }
 }
 
@@ -253,43 +236,31 @@ export function parsePipelines(cmd: string): any[] {
     return grammar.parse(cmd)
 }
 
-// Execute a parsed command pipeline, executing each part
-// recursively by setting a callback that is either the next
-// command in line or a final "stdout" callback
+// Execute a parsed command pipeline, recursively passing each stage's
+// result into the next stage.
 
 //        /~+~+~+~+~+~+~+~+~+~+~+~+~+\
 //       |  PROCEED AT YOUR OWN RISK  |
 //       |       dragons afoot        |
 //        \+~+~+~+~+~+~+~+~+~+~+~+~+~/
 
-function runPipelines(
+async function runPipelines(
     pipelines: any[],
     inp: any,
     ctx: Scope,
-    cb: Callback,
-): void {
-    if (pipelines.length > 1) {
-        const _runPipeline = (_pipeline: any, _cb: Callback) => {
-            runPipeline(_pipeline, inp, ctx, _cb)
-        }
-        async.mapSeries(
-            pipelines,
-            _runPipeline,
-            (err: any, results?: any[]) => {
-                cb(err, results?.slice(-1)[0])
-            },
-        )
-    } else {
-        runPipeline(pipelines[0], inp, ctx, cb)
+): Promise<any> {
+    let result: any
+    for (const pipeline of pipelines) {
+        result = await runPipeline(pipeline, inp, ctx)
     }
+    return result
 }
 
-export function runPipeline(
+export async function runPipeline(
     _cmd_tokens: CommandToken[],
     inp: any,
     ctx: Scope,
-    final_cb: Callback,
-): void {
+): Promise<any> {
     if (DEBUG) {
         console.log("\n=== RUNNING PIPELINE ===")
         inspect(inp)
@@ -304,38 +275,30 @@ export function runPipeline(
     if (!cmd_args) cmd_args = ["id"]
 
     // Replace sub-commands and variables
-    const parseArgs = (inp: any, args: any[], cb: Callback) => {
+    const parseArgs = async (inp: any, args: any[]): Promise<any[]> => {
         if (DEBUG) {
             console.log("parsing args for " + _inspect(inp))
             console.log(":::> " + _inspect(args))
         }
 
-        const replaceArg = (arg: any, _cb: Callback) => {
+        const replaceArg = async (arg: any): Promise<any> => {
             if (isObject(arg)) {
                 if (arg instanceof Lambda) {
-                    return _cb(null, arg)
+                    return arg
                 } else if (arg.fn != null) {
                     // Lambda token from the grammar: capture the current
                     // scope instead of evaluating the body
-                    return _cb(
-                        null,
-                        new Lambda(
-                            arg.fn as any[],
-                            (arg.params as string[]) || [],
-                            ctx,
-                            arg.src as string | undefined,
-                        ),
+                    return new Lambda(
+                        arg.fn as any[],
+                        (arg.params as string[]) || [],
+                        ctx,
+                        arg.src as string | undefined,
                     )
                 } else if (arg.sub != null) {
-                    return runPipelines(arg.sub as any[], inp, ctx, _cb)
+                    return runPipelines(arg.sub as any[], inp, ctx)
                 } else if (arg.quoted != null) {
-                    return parseArgs(
-                        inp,
-                        arg.quoted as any[],
-                        (err: Error | null, qargs?: any[]) => {
-                            _cb(null, qargs?.join(" "))
-                        },
-                    )
+                    const qargs = await parseArgs(inp, arg.quoted as any[])
+                    return qargs.join(" ")
                 }
             } else if (isString(arg)) {
                 // Int replacement
@@ -391,79 +354,55 @@ export function runPipeline(
                     }
                 }
             }
-            _cb(null, arg)
+            return arg
         }
 
-        async.map(args, replaceArg, (err: any, new_args?: any[]) => {
-            cb(null, new_args)
-        })
+        return Promise.all(args.map(replaceArg))
     }
 
     // Apply an at expression at the end
-    const applyAt = (data: any, cb: Callback) => {
+    const applyAt = async (data: any): Promise<any> => {
         if (cmd_token.at != null) {
             if (cmd_type === "||" || cmd_type === "|=") {
-                const _at = (_data: any, _cb: Callback) => {
-                    at(_data, cmd_token.at!, ctx, _cb)
-                }
-                async.map(data, _at, cb)
-            } else {
-                at(data, cmd_token.at, ctx, cb)
+                return Promise.all(
+                    data.map((_data: any) => at(_data, cmd_token.at!, ctx)),
+                )
             }
-        } else {
-            cb(null, data)
+            return at(data, cmd_token.at, ctx)
         }
+        return data
     }
 
-    // Check if we're at the final step
-    let cb: Callback
-    if (cmd_tokens.length === 0) {
-        cb = (err: Error | null, ret?: any) => {
-            if (DEBUG) {
-                console.log(" ===> " + _inspect(ret))
-            }
-            if (err) {
-                final_cb(err)
-            } else {
-                applyAt(ret, final_cb)
-            }
-        }
-    } else {
-        // An |? stage catches the upstream error as its input; any other
-        // error aborts the pipeline
-        const routeError = (err: any) => {
-            if (cmd_tokens[0]?.type === "|?") {
-                return runPipeline(cmd_tokens, err, ctx, final_cb)
-            }
-            final_cb(err)
+    const continuePipeline = async (ret: any): Promise<any> => {
+        const applied = await applyAt(ret)
+        if (!cmd_tokens.length) {
+            if (DEBUG) console.log(" ===> " + _inspect(applied))
+            return applied
         }
 
-        // Create a callback to continue the pipeline otherwise
-        cb = (err: Error | null, ret?: any) => {
-            if (err) return routeError(err)
-            applyAt(ret, (err: Error | null, ret?: any) => {
-                if (err) return routeError(err)
-                // |? stages only run on error; skip them on success
-                let next = cmd_tokens
-                while (next.length && next[0].type === "|?") {
-                    next = next.slice(1)
-                }
-                if (!next.length) return final_cb(null, ret)
-                runPipeline(next, ret, ctx, final_cb)
-            })
+        // |? stages only run on error; skip them on success
+        let next = cmd_tokens
+        while (next.length && next[0].type === "|?") {
+            next = next.slice(1)
         }
+        if (!next.length) return applied
+        return runPipeline(next, applied, ctx)
+    }
+
+    const routeError = async (err: any): Promise<any> => {
+        if (cmd_tokens[0]?.type === "|?") {
+            return runPipeline(cmd_tokens, err, ctx)
+        }
+        throw err
     }
 
     // Run this stage (command or infix expression) against a single input
-    const runStage = (_inp: any, _cb: Callback) => {
+    const runStage = async (_inp: any): Promise<any> => {
         if (cmd_token.expr != null) {
-            evalExpr(cmd_token.expr, _inp, ctx, _cb)
-        } else {
-            parseArgs(_inp, cmd_args, (err: Error | null, args?: any[]) => {
-                if (err) return _cb(err)
-                doCmd(args!, _inp, ctx, _cb)
-            })
+            return evalExpr(cmd_token.expr, _inp, ctx)
         }
+        const args = await parseArgs(_inp, cmd_args)
+        return doCmd(args, _inp, ctx)
     }
 
     // Parse arguments and then execute
@@ -471,10 +410,12 @@ export function runPipeline(
     // Return literal value (number, string, bool, null) if $val
     if ("val" in cmd_token) {
         if (DEBUG) console.log("VAL: " + _inspect(cmd_args))
-        parseArgs(inp, [cmd_token.val], (err: Error | null, parsed?: any[]) => {
-            if (err) return cb(err)
-            cb(null, parsed![0])
-        })
+        try {
+            const parsed = await parseArgs(inp, [cmd_token.val])
+            return continuePipeline(parsed[0])
+        } catch (err) {
+            return routeError(err)
+        }
     }
     // Return variable value if $var
     else if (cmd_token.var != null) {
@@ -487,16 +428,21 @@ export function runPipeline(
             const key = $key.slice(1)
             val = ctx.get("vars", key)
         }
-        cb(null, val)
+        return continuePipeline(val)
     }
     // Otherwise look the pipe operator up in the registry
     else {
         if (DEBUG) console.log((cmd_type || "|") + ": " + _inspect(cmd_args))
         const handler = pipeHandlers[cmd_type || "|"]
         if (!handler) {
-            return final_cb(`Unknown pipe operator ${cmd_type}. `)
+            throw `Unknown pipe operator ${cmd_type}. `
         }
-        handler(inp, ctx, runStage, cb)
+        try {
+            const ret = await handler(inp, ctx, runStage)
+            return continuePipeline(ret)
+        } catch (err) {
+            return routeError(err)
+        }
     }
 }
 
@@ -507,29 +453,24 @@ export function runPipeline(
 export type PipeHandler = (
     inp: any,
     ctx: Scope,
-    runStage: (inp: any, cb: Callback) => void,
-    cb: Callback,
-) => void
+    runStage: (inp: any) => Promise<any>,
+) => Promise<any>
 
 const pipeHandlers: Record<string, PipeHandler> = {
     // standard pipe: run the stage once with the piped input
-    "|": (inp, ctx, run, cb) => run(inp, cb),
+    "|": (inp, ctx, run) => run(inp),
     // error pipe: only reached via error routing in runPipeline, where the
     // upstream error arrives as the input; skipped entirely on success
-    "|?": (inp, ctx, run, cb) => run(inp, cb),
+    "|?": (inp, ctx, run) => run(inp),
     // parallel pipe: map the stage over a list in parallel
-    "||": (inp, ctx, run, cb) => {
-        const tasks = (inp as any[]).map(
-            (_inp) => (_cb: Callback) => run(_inp, _cb),
-        )
-        async.parallel(tasks, cb)
-    },
+    "||": (inp, ctx, run) => Promise.all((inp as any[]).map(run)),
     // series pipe: map the stage over a list one at a time
-    "|=": (inp, ctx, run, cb) => {
-        const tasks = (inp as any[]).map(
-            (_inp) => (_cb: Callback) => run(_inp, _cb),
-        )
-        async.series(tasks, cb)
+    "|=": async (inp, ctx, run) => {
+        const results: any[] = []
+        for (const item of inp as any[]) {
+            results.push(await run(item))
+        }
+        return results
     },
 }
 
@@ -540,28 +481,22 @@ export function registerPipeOperator(op: string, handler: PipeHandler): void {
 // Evaluate an infix expression tree: resolve operands (literals, variables,
 // sub-pipes) against the current input and scope, then apply operators
 
-function evalExpr(node: ExprNode, inp: any, ctx: Scope, cb: Callback): void {
+async function evalExpr(node: ExprNode, inp: any, ctx: Scope): Promise<any> {
     if (node.op != null) {
-        evalExpr(node.left!, inp, ctx, (err: any, left?: any) => {
-            if (err) return cb(err)
-            evalExpr(node.right!, inp, ctx, (err: any, right?: any) => {
-                if (err) return cb(err)
-                cb(null, applyOp(node.op!, left, right))
-            })
-        })
+        const left = await evalExpr(node.left!, inp, ctx)
+        const right = await evalExpr(node.right!, inp, ctx)
+        return applyOp(node.op!, left, right)
     } else if (node.sub != null) {
-        runPipelines(node.sub, inp, ctx, cb)
+        return runPipelines(node.sub, inp, ctx)
     } else if (node.var != null) {
         if (node.var === "$!") {
-            cb(null, inp)
-        } else {
-            cb(null, ctx.get("vars", node.var.slice(1)))
+            return inp
         }
+        return ctx.get("vars", node.var.slice(1))
     } else if ("val" in node) {
-        cb(null, node.val)
-    } else {
-        cb(`Bad expression operand: ${_inspect(node)}`)
+        return node.val
     }
+    throw `Bad expression operand: ${_inspect(node)}`
 }
 
 function applyOp(op: string, a: any, b: any): any {
@@ -600,7 +535,7 @@ function applyOp(op: string, a: any, b: any): any {
 // Execute a given command by looking in `ctx.fns` for a function
 // called `[cmd]` and passing that function the split arguments
 
-export function doCmd(_args: any[], inp: any, ctx: Scope, cb: Callback): void {
+export async function doCmd(_args: any[], inp: any, ctx: Scope): Promise<any> {
     if (DEBUG) {
         console.log("\n##### DO CMD ######")
         inspect(_args)
@@ -610,26 +545,16 @@ export function doCmd(_args: any[], inp: any, ctx: Scope, cb: Callback): void {
     const args = cloneShallow(_args)
     const cmd = args.shift()
 
-    // Commands report failure through the callback, but a buggy or
-    // misused command can still throw synchronously (e.g. a string
-    // builtin on undefined input). Convert that into a pipeline error
-    // so the rest of the chain isn't left hanging.
-    let called = false
-    const done: Callback = (err, ret?) => {
-        if (called) return
-        called = true
-        cb(err, ret)
-    }
-    const invoke = (run: () => void) => {
+    const invoke = async (run: () => any) => {
         try {
-            run()
+            return await run()
         } catch (e) {
-            done(`Error in command ${cmd}: ${e}`)
+            throw `Error in command ${cmd}: ${e}`
         }
     }
 
     if (cmd instanceof Lambda) {
-        return invoke(() => cmd.call(inp, args, done))
+        return invoke(() => cmd.call(inp, args))
     }
     // Scope chain first, builtins as fallback: defs, aliases, and module
     // commands can shadow a builtin (the `builtin` command bypasses this)
@@ -637,16 +562,14 @@ export function doCmd(_args: any[], inp: any, ctx: Scope, cb: Callback): void {
     if (fn) {
         const resolved = fn
         if (resolved instanceof Lambda) {
-            invoke(() => resolved.call(inp, args, done))
-        } else {
-            invoke(() => resolved(inp, args, ctx, done))
+            return invoke(() => resolved.call(inp, args))
         }
+        return invoke(() => resolved(inp, args, ctx))
     } else if ((fn = builtins[cmd])) {
         const resolved = fn
-        invoke(() => resolved(inp, args, ctx, done))
-    } else {
-        cb(`No command ${cmd}. `)
+        return invoke(() => resolved(inp, args, ctx))
     }
+    throw `No command ${cmd}. `
 }
 
 // Splits a string into "arguments" by separating with whitespace
@@ -663,18 +586,15 @@ function splitArgs(s: string): string[] {
 }
 
 // Map a function into array of arrays at a certain depth
-function mapInto(
+async function mapInto(
     l: any[],
-    f: (item: any, cb: Callback) => void,
+    f: (item: any) => Promise<any>,
     d: number,
-    cb: Callback,
-): void {
+): Promise<any[]> {
     if (d === 1) {
-        async.map(l, f, cb)
-    } else {
-        const _into = (_l: any[], _cb: Callback) => mapInto(_l, f, d - 1, _cb)
-        async.map(l, _into, cb)
+        return Promise.all(l.map(f))
     }
+    return Promise.all(l.map((_l) => mapInto(_l, f, d - 1)))
 }
 
 //   , \-._ >._,_     _,_.< _.-/
@@ -684,14 +604,13 @@ function mapInto(
 
 // Take an object and an expression and follow the expression
 // tree down to the desired result
-function descendObj(
+async function descendObj(
     _obj: any,
     _expr: AtExpression[],
     ctx: Scope,
-    final_cb: Callback,
-): void {
+): Promise<any> {
     if (_obj == null) {
-        return final_cb(null, undefined)
+        return undefined
     }
 
     // This is me hoping Node has really good GC
@@ -707,134 +626,55 @@ function descendObj(
         console.log("\\ - - ~ @ ~ - - /\n")
     }
 
-    // Check if we're at the final step
-    let cb: Callback
-    if (expr.length === 0) {
-        cb = final_cb
-    } else {
-        cb = (err: Error | null, ret?: any) => {
-            descendObj(ret, expr, ctx, final_cb)
-        }
-    }
+    const finish = async (ret: any) =>
+        expr.length === 0 ? ret : descendObj(ret, expr, ctx)
 
     if (step == null) {
-        cb(null, obj)
-        return
+        return finish(obj)
     }
 
     // Map attributes
     if (step.map != null) {
-        const map_get = (__obj: any, _cb: Callback) => {
-            descendObj(__obj, [{ get: step.map }], ctx, _cb)
-        }
-        mapInto(obj, map_get, step.depth!, cb)
+        const map_get = (__obj: any) =>
+            descendObj(__obj, [{ get: step.map }], ctx)
+        return finish(await mapInto(obj, map_get, step.depth!))
     }
     // Substitution
     else if (step.sub != null) {
-        runPipelines(step.sub as any[], obj, ctx, cb)
+        return finish(await runPipelines(step.sub as any[], obj, ctx))
     }
     // Array result
     else if (Array.isArray(step.get)) {
-        const tasks = (step.get as any[]).map((step_expr: any) => {
-            return (_cb: Callback) => descendObj(obj, step_expr, ctx, _cb)
-        })
-        async.parallel(tasks, cb)
+        const result = await Promise.all(
+            (step.get as any[]).map((step_expr: any) =>
+                descendObj(obj, step_expr, ctx),
+            ),
+        )
+        return finish(result)
     }
     // Object result
     else if (isObject(step.get) && step.get.obj != null) {
-        const tasks: Array<(cb: Callback) => void> = []
-        for (const set of step.get.obj as any[]) {
-            ;((set) => {
-                const k = set.key
-                const e = set.val
-
-                if (isString(k)) {
-                    // Key is a string, just get value
-                    tasks.push((_cb: Callback) => {
-                        // Check if value is a sub-command or an at-expression
-                        if (e.sub != null) {
-                            runPipelines(
-                                e.sub,
-                                obj,
-                                ctx,
-                                (err: Error | null, v_obj?: any) => {
-                                    const dobj = {
-                                        key: k,
-                                        val: v_obj,
-                                    }
-                                    _cb(null, dobj)
-                                },
-                            )
-                        } else {
-                            descendObj(
-                                obj,
-                                e,
-                                ctx,
-                                (err: Error | null, v_obj?: any) => {
-                                    const dobj = {
-                                        key: k,
-                                        val: v_obj,
-                                    }
-                                    _cb(null, dobj)
-                                },
-                            )
-                        }
-                    })
-                } else {
-                    // Key is an expression, get both key value and value value
-                    tasks.push((_cb: Callback) => {
-                        descendObj(
-                            obj,
-                            k,
-                            ctx,
-                            (err: Error | null, k_obj?: any) => {
-                                // Check if value is a sub-command or an at-expression
-                                if (e.sub != null) {
-                                    runPipelines(
-                                        e.sub,
-                                        obj,
-                                        ctx,
-                                        (err: Error | null, v_obj?: any) => {
-                                            const dobj = {
-                                                key: k_obj,
-                                                val: v_obj,
-                                            }
-                                            _cb(null, dobj)
-                                        },
-                                    )
-                                } else {
-                                    descendObj(
-                                        obj,
-                                        e,
-                                        ctx,
-                                        (err: Error | null, v_obj?: any) => {
-                                            const dobj = {
-                                                key: k_obj,
-                                                val: v_obj,
-                                            }
-                                            _cb(null, dobj)
-                                        },
-                                    )
-                                }
-                            },
-                        )
-                    })
-                }
-            })(set)
+        const results = await Promise.all(
+            (step.get.obj as any[]).map(async (set) => {
+                const key = isString(set.key)
+                    ? set.key
+                    : await descendObj(obj, set.key, ctx)
+                const value =
+                    set.val.sub != null
+                        ? await runPipelines(set.val.sub, obj, ctx)
+                        : await descendObj(obj, set.val, ctx)
+                return { key, val: value }
+            }),
+        )
+        const result_obj: Record<string, any> = {}
+        for (const result of results) {
+            result_obj[result.key] = result.val
         }
-
-        // Combine results into single object
-        async.parallel(tasks, (err: any, results?: any[]) => {
-            const result_obj: Record<string, any> = {}
-            for (const result of results!) {
-                result_obj[result.key] = result.val
-            }
-            cb(null, result_obj)
-        })
+        return finish(result_obj)
     }
     // Get attribute
     else {
-        cb(null, accessor(obj, step.get))
+        return finish(accessor(obj, step.get))
     }
 }
 
@@ -869,12 +709,12 @@ function accessor(obj: any, key: any): any {
 
 // create a command out of a script
 function through(cmd: string): HashpipeFunction {
-    return (inp: any, args: any[], ctx: any, cb: Callback) => {
+    return (inp: any, args: any[], ctx: any) => {
         const pipeline = parsePipelines(cmd)[0]
         if (pipeline[0].cmd != null) {
             pipeline[0].cmd.push(...args)
         }
-        runPipeline(pipeline, inp, ctx, cb)
+        return runPipeline(pipeline, inp, ctx)
     }
 }
 
@@ -882,14 +722,14 @@ function through(cmd: string): HashpipeFunction {
 // call-site args are appended to the first command and the body runs in
 // the caller's scope, preserving classic alias semantics.
 function aliasFn(lam: Lambda): HashpipeFunction {
-    return (inp: any, args: any[], ctx: any, cb: Callback) => {
+    return (inp: any, args: any[], ctx: any) => {
         const pipelines = lam.tokens.slice()
         const first = cloneShallow(pipelines[0])
         if (first[0]?.cmd != null) {
             first[0] = { ...first[0], cmd: [...first[0].cmd, ...args] }
         }
         pipelines[0] = first
-        runPipelines(pipelines, inp, ctx, cb)
+        return runPipelines(pipelines, inp, ctx)
     }
 }
 
@@ -898,11 +738,6 @@ function aliasFn(lam: Lambda): HashpipeFunction {
 setLambdaRunner(runPipelines)
 
 // Read in an at expression
-export function at(
-    inp: any,
-    expr: AtExpression[],
-    ctx: Scope,
-    cb: Callback,
-): void {
-    descendObj(inp, expr, ctx, cb)
+export function at(inp: any, expr: AtExpression[], ctx: Scope): Promise<any> {
+    return descendObj(inp, expr, ctx)
 }

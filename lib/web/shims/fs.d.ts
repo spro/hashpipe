@@ -1,6 +1,6 @@
 export declare function readFileSync(_path: any): never;
 export declare function appendFileSync(_path: any, _data: any): never;
-export declare function readFile(...args: any[]): void;
+export declare function readFile(): never;
 declare const _default: {
     readFileSync: typeof readFileSync;
     appendFileSync: typeof appendFileSync;

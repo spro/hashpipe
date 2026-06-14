@@ -10,7 +10,8 @@ function inspectValue(value: any, seen: Set<any>): string {
     if (value === undefined) return "undefined"
     const t = typeof value
     if (t === "string") return "'" + value + "'"
-    if (t === "function") return "[Function: " + (value.name || "anonymous") + "]"
+    if (t === "function")
+        return "[Function: " + (value.name || "anonymous") + "]"
     if (t !== "object") return String(value)
     if (typeof value[custom] === "function") return value[custom]()
     if (seen.has(value)) return "[Circular]"

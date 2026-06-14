@@ -1,6 +1,7 @@
 import * as fs from "fs"
+import * as fsp from "fs/promises"
 import * as path from "path"
-import { HashpipeFunction } from "../helpers"
+import { HashpipeFunction, command } from "../helpers"
 
 function resolvePath(string: string): string {
     if (string.substr(0, 1) === "~") {
@@ -10,48 +11,45 @@ function resolvePath(string: string): string {
 }
 
 // cat "filename" -> "file"
-export const cat: HashpipeFunction = (inp, args, ctx, cb) => {
+export const cat: HashpipeFunction = command(async (inp, args) => {
     const filename = resolvePath(args[0])
-    fs.readFile(filename, (err, buffer) => {
-        if (err) return cb(err)
-        cb(null, buffer.toString())
-    })
-}
+    return (await fsp.readFile(filename)).toString()
+})
 
 // cat-stream "filename" -> {file}
-export const cat_stream: HashpipeFunction = (inp, args, ctx, cb) => {
+export const cat_stream: HashpipeFunction = command((inp, args) => {
     const filename = resolvePath(args[0])
-    cb(null, fs.createReadStream(filename))
-}
+    return fs.createReadStream(filename)
+})
 
 // "file" -> write "filename" -> "file"
-export const write: HashpipeFunction = (inp, args, ctx, cb) => {
+export const write: HashpipeFunction = command(async (inp, args) => {
     const filename = resolvePath(args[0])
-    fs.writeFile(filename, inp, (err) => {
-        if (err) return cb(err)
-        cb(null, inp)
-    })
-}
+    await fsp.writeFile(filename, inp)
+    return inp
+})
 
 // ls "dir?" -> ["filename"]
-export const ls: HashpipeFunction = (inp, args, ctx, cb) => {
+export const ls: HashpipeFunction = command(async (inp, args) => {
     const filename = resolvePath(args[0] || ".")
-    fs.readdir(filename, (err, filenames) => {
-        if (err) return cb(err)
-        const filtered = filenames.filter((f) => f[0] !== ".")
-        const files = filtered.filter((subfilename) => {
-            return fs.lstatSync(path.join(filename, subfilename)).isFile()
-        })
-        const dirs = filtered.filter((subfilename) => {
-            return fs.lstatSync(path.join(filename, subfilename)).isDirectory()
-        })
-        cb(null, { dirs, files })
-    })
-}
+    const filenames = (await fsp.readdir(filename)).filter((f) => f[0] !== ".")
+    const stats = await Promise.all(
+        filenames.map(async (subfilename) => ({
+            subfilename,
+            stat: await fsp.lstat(path.join(filename, subfilename)),
+        })),
+    )
+    const files = stats
+        .filter(({ stat }) => stat.isFile())
+        .map(({ subfilename }) => subfilename)
+    const dirs = stats
+        .filter(({ stat }) => stat.isDirectory())
+        .map(({ subfilename }) => subfilename)
+    return { dirs, files }
+})
 
 // cd "dir" -> success
-export const cd: HashpipeFunction = (inp, args, ctx, cb) => {
+export const cd: HashpipeFunction = command((inp, args) => {
     const dirname = resolvePath(args[0] || process.env.HOME || "")
     process.chdir(dirname)
-    cb(null)
-}
+})

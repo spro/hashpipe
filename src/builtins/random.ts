@@ -1,4 +1,5 @@
 import { BuiltinMap } from "./common"
+import { command } from "../helpers"
 
 // Random generators and sampling utilities.
 
@@ -40,22 +41,16 @@ function shuffle<T>(list: T[]): T[] {
 }
 
 const randomBuiltins: BuiltinMap = {
-    randstr: (inp, args, ctx, cb) => {
-        cb(null, randstr(args[0]))
-    },
-    randint: (inp, args, ctx, cb) => {
-        cb(null, randint(args[0]))
-    },
-    choice: (inp, args, ctx, cb) => {
-        cb(null, sampleSingle(inp))
-    },
-    sample: (inp, args, ctx, cb) => {
+    randstr: command((inp, args) => randstr(args[0])),
+    randint: command((inp, args) => randint(args[0])),
+    choice: command((inp) => sampleSingle(inp)),
+    sample: command((inp, args) => {
         const requested = Number(args[0])
         const size = Number.isFinite(requested)
             ? Math.max(0, Math.floor(requested))
             : Math.floor(inp.length / 2)
-        cb(null, sampleMany(inp, size))
-    },
+        return sampleMany(inp, size)
+    }),
 }
 
 export default randomBuiltins

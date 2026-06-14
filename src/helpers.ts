@@ -1,12 +1,7 @@
 import { inspect } from "util"
 
-export type Callback<T = any> = (err: any, result?: T) => void
-export type HashpipeFunction = (
-    inp: any,
-    args: any[],
-    ctx: any,
-    cb: Callback,
-) => void
+export type MaybePromise<T = any> = T | PromiseLike<T>
+export type HashpipeFunction = (inp: any, args: any[], ctx: any) => MaybePromise
 
 // A first-class function value: an unevaluated pipeline plus the scope it
 // was created in. Invocation runs the body in a child of the captured scope
@@ -18,8 +13,7 @@ export type PipelineRunner = (
     pipelines: any[],
     inp: any,
     ctx: any,
-    cb: Callback,
-) => void
+) => Promise<any>
 
 let lambdaRunner: PipelineRunner | null = null
 
@@ -35,9 +29,9 @@ export class Lambda {
         public src?: string,
     ) {}
 
-    call(inp: any, args: any[], cb: Callback): void {
+    call(inp: any, args: any[]): Promise<any> {
         if (!lambdaRunner) {
-            return cb("Lambda runner not initialized")
+            return Promise.reject("Lambda runner not initialized")
         }
         const scope =
             this.ctx && typeof this.ctx.subScope === "function"
@@ -47,7 +41,7 @@ export class Lambda {
             scope.set("vars", param, i < args.length ? args[i] : inp)
         })
         scope.set("vars", "args", args.slice(this.params.length))
-        lambdaRunner(this.tokens, inp, scope, cb)
+        return lambdaRunner(this.tokens, inp, scope)
     }
 
     private display(): string {
@@ -79,24 +73,34 @@ export function wrapone(
     f: (...args: any[]) => void,
     with_inp: boolean = false,
 ): HashpipeFunction {
-    return (inp: any, args: any[], ctx: any, cb: Callback) => {
+    return (inp: any, args: any[]) => {
         if (with_inp) {
             args.unshift(inp)
         }
-        f(...args, cb)
+        return f(...args)
     }
+}
+
+export function isPromiseLike<T = any>(value: any): value is PromiseLike<T> {
+    return value != null && typeof value.then === "function"
+}
+
+export function command<T = any>(
+    fn: (inp: any, args: any[], ctx: any) => MaybePromise<T>,
+): HashpipeFunction {
+    return fn
 }
 
 export function wraponeSync(
     f: (...args: any[]) => any,
     with_inp: boolean = false,
 ): HashpipeFunction {
-    return (inp: any, args: any[], ctx: any, cb: Callback) => {
+    return command((inp: any, args: any[]) => {
         if (with_inp) {
             args.unshift(inp)
         }
-        cb(null, f(...args))
-    }
+        return f(...args)
+    })
 }
 
 export function wrapall(

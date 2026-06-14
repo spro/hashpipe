@@ -4,9 +4,9 @@
 // replaced by fetch-backed equivalents below.
 
 import { Pipeline, Scope } from "../pipeline"
-import { Lambda } from "../helpers"
+import { Lambda, command } from "../helpers"
 import { HelpPage } from "../builtins/help"
-import type { Callback, HashpipeFunction } from "../helpers"
+import type { HashpipeFunction } from "../helpers"
 
 // fetch-backed analog of the node http module. The url is the first
 // argument, or the piped input if no argument is given; a missing scheme
@@ -14,10 +14,10 @@ import type { Callback, HashpipeFunction } from "../helpers"
 // Responses parse as JSON when possible, falling back to text.
 
 function httpCommand(method: string): HashpipeFunction {
-    return (inp, args, ctx, cb) => {
+    return command(async (inp, args) => {
         let url = args.length ? String(args[0]) : inp
         if (typeof url !== "string" || !url.length) {
-            return cb(method.toLowerCase() + ": no url given")
+            throw new Error(method.toLowerCase() + ": no url given")
         }
         if (!/^https?:\/\//.test(url)) url = "https://" + url
         const init: RequestInit = { method }
@@ -25,20 +25,17 @@ function httpCommand(method: string): HashpipeFunction {
             init.body = typeof inp === "string" ? inp : JSON.stringify(inp)
             init.headers = { "content-type": "application/json" }
         }
-        fetch(url, init)
-            .then(async (res) => {
-                const text = await res.text()
-                let data: any = text
-                try {
-                    data = JSON.parse(text)
-                } catch {
-                    // leave as text
-                }
-                if (!res.ok) return cb("HTTP " + res.status + " for " + url)
-                cb(null, data)
-            })
-            .catch((err) => cb(String(err)))
-    }
+        const res = await fetch(url, init)
+        const text = await res.text()
+        let data: any = text
+        try {
+            data = JSON.parse(text)
+        } catch {
+            // leave as text
+        }
+        if (!res.ok) throw new Error("HTTP " + res.status + " for " + url)
+        return data
+    })
 }
 
 const http: Record<string, HashpipeFunction> = {}
@@ -80,20 +77,14 @@ export class WebShell {
         this.context = this.pipeline.subScope()
     }
 
-    exec(script: string, cb: Callback): void {
-        try {
-            this.pipeline.exec(
-                script,
-                this.last_out,
-                this.context,
-                (err, data) => {
-                    this.last_out = data
-                    cb(err, data)
-                },
-            )
-        } catch (e) {
-            cb(String(e))
-        }
+    async exec(script: string): Promise<any> {
+        const data = await this.pipeline.exec(
+            script,
+            this.last_out,
+            this.context,
+        )
+        this.last_out = data
+        return data
     }
 }
 

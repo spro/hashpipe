@@ -12,9 +12,8 @@ export function appendFileSync(_path: any, _data: any): never {
     throw new Error(message)
 }
 
-export function readFile(...args: any[]): void {
-    const cb = args[args.length - 1]
-    if (typeof cb === "function") cb(new Error(message))
+export function readFile(): never {
+    throw new Error(message)
 }
 
 export default { readFileSync, appendFileSync, readFile }
