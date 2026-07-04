@@ -17,6 +17,10 @@
             : window.innerHeight
 
     function scrollToPrompt() {
+        // Scroll immediately and again on the next frame: the sync scroll
+        // guarantees new entries are never appended out of view, the raf
+        // pass catches late layout (fonts, keyboard, async output)
+        terminal.scrollTop = terminal.scrollHeight
         window.requestAnimationFrame(function () {
             terminal.scrollTop = terminal.scrollHeight
             if (inputLine.scrollIntoView) inputLine.scrollIntoView({ block: "end" })
@@ -174,6 +178,13 @@
 
     var SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
+    // Commands render their entry the moment they are submitted and run
+    // in order off a queue — the input never disables, so typing during a
+    // slow command can't drop keystrokes, and every entry is visible
+    // immediately even while earlier commands are still working
+    var queue = []
+    var busy = false
+
     function run(script) {
         var entry = div("entry")
         var cmdline = div("cmdline")
@@ -181,41 +192,44 @@
         cmdline.appendChild(span("cmd", script))
         entry.appendChild(cmdline)
 
-        // Loading placeholder: sync pipelines finish before the next paint,
-        // so the spinner is only ever visible for slow async work (fetches)
         var pending = div("pending")
         pending.textContent = SPINNER_FRAMES[0]
         entry.appendChild(pending)
+
+        append(entry)
+        queue.push({ script: script, entry: entry, pending: pending })
+        drain()
+    }
+
+    function drain() {
+        if (busy || !queue.length) return
+        busy = true
+        var job = queue.shift()
         var frame = 0
         var spinner = setInterval(function () {
             frame = (frame + 1) % SPINNER_FRAMES.length
-            pending.textContent = SPINNER_FRAMES[frame]
+            job.pending.textContent = SPINNER_FRAMES[frame]
         }, 80)
 
-        append(entry)
-
-        input.disabled = true
         function finish() {
             clearInterval(spinner)
-            entry.removeChild(pending)
-            input.disabled = false
-            input.focus()
+            job.entry.removeChild(job.pending)
             scrollToPrompt()
+            busy = false
+            drain()
         }
-        shell.exec(script).then(
+        shell.exec(job.script).then(
             function (data) {
-                finish()
                 if (Hashpipe.HelpPage && data instanceof Hashpipe.HelpPage) {
-                    renderHelp(entry, data)
+                    renderHelp(job.entry, data)
                 } else if (data != null) {
                     var out = div("output")
                     renderInto(out, data, 0)
-                    entry.appendChild(out)
+                    job.entry.appendChild(out)
                 }
-                scrollToPrompt()
+                finish()
             },
             function (err) {
-                finish()
                 var errLine = div("error")
                 // Structured errors (e.g. http status objects) render as
                 // values so their fields are readable
@@ -225,8 +239,8 @@
                 } else {
                     errLine.textContent = "[ERROR] " + err
                 }
-                entry.appendChild(errLine)
-                scrollToPrompt()
+                job.entry.appendChild(errLine)
+                finish()
             },
         )
     }
@@ -268,9 +282,10 @@
         setTimeout(syncViewport, 0)
     })
 
-    // Backstop: never leave the input disabled if an error escapes a command
+    // Backstop: never leave the queue stuck if an error escapes a command
     window.addEventListener("error", function () {
-        input.disabled = false
+        busy = false
+        drain()
         input.focus()
     })
 
