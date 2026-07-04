@@ -24,7 +24,7 @@ For syntax details, see [Syntax.md](Syntax.md). For workflow examples, see
 
 Examples:
 
-```coffee
+```hashpipe
 #| if true {| echo yes } {| echo no }
 'yes'
 
@@ -47,7 +47,7 @@ Hashpipe has both prefix math commands and infix expressions.
 
 Infix operators are `+ - * / % < > <= >= == !=`:
 
-```coffee
+```hashpipe
 #| 2 + 3 * 4
 14
 
@@ -101,7 +101,7 @@ defined commands.
 
 Examples:
 
-```coffee
+```hashpipe
 #| [1, 2, 3] | map {| * 10 }
 [ 10, 20, 30 ]
 
@@ -201,7 +201,7 @@ Load modules with `use <name>`. The default REPL preloads `http`, `html`,
 
 The third argument can include `headers`, `auth`, or `redirect` options:
 
-```coffee
+```hashpipe
 #| http.get https://api.example.test/items {limit: 10} {headers: {accept: "application/json"}}
 ```
 

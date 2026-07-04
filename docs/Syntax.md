@@ -117,8 +117,8 @@ Variables are used with the `$var` syntax in command arguments. String arguments
 #| echo I just realized today is $today.
 'I just realized today is Wednesday.'
 
-#| echo Going up, on a $yesterday
-'Going up, on a Tuesday'
+#| echo Going up on a $yesterday
+'Going up on a Tuesday'
 
 #| list $yesterday $today \$tomorrow
 [ 'Tuesday', 'Wednesday', '$tomorrow' ]
@@ -177,6 +177,24 @@ and return a new list of each result.
 
 #| list Tom Fred George || echo Sir $!
 [ 'Sir Tom', 'Sir Fred', 'Sir George' ]
+```
+
+Pipes are the separators: everything within a section — the command, its
+arguments, and any `@`-expression suffix — applies together as a unit. Under
+`||` or `|=` the whole section runs once per item, so a suffix reads from
+each item's result:
+
+```hashpipe
+#| ["alpha", "beta", "gamma"] || upper @ 0..2
+[ 'AL', 'BE', 'GA' ]
+```
+
+To operate on the combined results instead, start a new section — a bare
+`@`-expression is a valid stage of its own:
+
+```hashpipe
+#| ["alpha", "beta", "gamma"] || upper | @ 0..2
+[ 'ALPHA', 'BETA' ]
 ```
 
 A failed stage normally aborts the whole pipeline. The error pipe `|?`
@@ -428,16 +446,16 @@ over builtins, so any command can be redefined. `builtin` runs the original
 regardless of shadowing, and `which` reports where a name resolves:
 
 ```hashpipe
-#| def upper {| echo shadowed }
+#| def lower {| echo shadowed }
 
-#| echo hi | upper
+#| echo HI | lower
 'shadowed'
 
-#| echo hi | builtin upper
-'HI'
+#| echo HI | builtin lower
+'hi'
 
-#| which upper
-{ command: 'upper', type: 'def', src: '{| echo shadowed }', shadows: 'builtin' }
+#| which lower
+{ command: 'lower', type: 'def', src: '{| echo shadowed }', shadows: 'builtin' }
 ```
 
 ### `call` and closures

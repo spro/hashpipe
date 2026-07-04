@@ -11,14 +11,14 @@ For language syntax, see [Syntax.md](Syntax.md). For command details, see
 
 Use `@` object expressions to pick and rename fields.
 
-```coffee
+```hashpipe
 #| {id: 7, title: "Hello", by: "sam", score: 42} @ {title, author: by, score}
 { title: 'Hello', author: 'sam', score: 42 }
 ```
 
 Map a shape over a list with `:{...}`:
 
-```coffee
+```hashpipe
 #| [{id: 1, title: "A", by: "ada"}, {id: 2, title: "B", by: "bea"}] @ :{id, title, author: by}
 [ { id: 1, title: 'A', author: 'ada' },
   { id: 2, title: 'B', author: 'bea' } ]
@@ -26,7 +26,7 @@ Map a shape over a list with `:{...}`:
 
 Use slices to take a page of results:
 
-```coffee
+```hashpipe
 #| range 10 @ 2..5
 [ 2, 3, 4 ]
 
@@ -38,21 +38,21 @@ Use slices to take a page of results:
 
 For simple exact matches, `where` is concise:
 
-```coffee
+```hashpipe
 #| [{kind: 'book', price: 12}, {kind: 'game', price: 60}] | where {kind: 'book'}
 [ { kind: 'book', price: 12 } ]
 ```
 
 For computed predicates, use a lambda with `filter`:
 
-```coffee
+```hashpipe
 #| [{name: 'alpha', score: 9}, {name: 'beta', score: 17}] | filter {| $(@ score) > 10 } @ :name
 [ 'beta' ]
 ```
 
 Sort by a field name or by a computed key:
 
-```coffee
+```hashpipe
 #| [{name: 'c', score: 3}, {name: 'a', score: 1}] | sortBy name @ :name
 [ 'a', 'c' ]
 
@@ -64,7 +64,7 @@ Sort by a field name or by a computed key:
 
 Count repeated values:
 
-```coffee
+```hashpipe
 #| list api api docs cli docs docs | count
 [ { item: 'cli', count: 1 },
   { item: 'api', count: 2 },
@@ -73,7 +73,7 @@ Count repeated values:
 
 Count or group objects by a field:
 
-```coffee
+```hashpipe
 #| [{kind: 'a'}, {kind: 'b'}, {kind: 'a'}] | countBy kind
 { a: 2, b: 1 }
 
@@ -84,7 +84,7 @@ Count or group objects by a field:
 
 Build a lookup table:
 
-```coffee
+```hashpipe
 #| [{id: 'u1', name: 'Ada'}, {id: 'u2', name: 'Bea'}] | indexBy id @ u2.name
 'Bea'
 ```
@@ -93,20 +93,20 @@ Build a lookup table:
 
 Load `http` explicitly in scripts. The REPL preloads it by default.
 
-```coffee
+```hashpipe
 #| use http
 #| http.get https://api.github.com/repos/spro/hashpipe @ {name, language, stars: stargazers_count}
 ```
 
 Pass query parameters as the second argument:
 
-```coffee
+```hashpipe
 #| http.get https://api.example.test/search {q: "hashpipe", limit: 10}
 ```
 
 Fetch many URLs in parallel with `||`, then reshape the results:
 
-```coffee
+```hashpipe
 #| $ids = [1, 2, 3]
 #| $ids || http.get https://api.example.test/items/$! @ {id, title}
 ```
@@ -118,21 +118,21 @@ time.
 
 Use `|?` to recover from a failed upstream stage:
 
-```coffee
+```hashpipe
 #| no-such-command |? val fallback | upper
 'FALLBACK'
 ```
 
 Because the error arrives as input, you can keep it:
 
-```coffee
+```hashpipe
 #| no-such-command |? echo failed: $!
 'failed: No command no-such-command. '
 ```
 
 For optional fields, combine `@` with `or`:
 
-```coffee
+```hashpipe
 #| {name: "Ada"} @ title | or "untitled"
 'untitled'
 ```
@@ -141,7 +141,7 @@ For optional fields, combine `@` with `or`:
 
 Use `def` for named commands with parameters:
 
-```coffee
+```hashpipe
 #| def dollars { $n | echo \$$n }
 #| dollars 12
 '$12'
@@ -149,7 +149,7 @@ Use `def` for named commands with parameters:
 
 Named commands work in higher-order commands:
 
-```coffee
+```hashpipe
 #| def adult {| $(@ age) >= 18 }
 #| [{name: 'A', age: 17}, {name: 'B', age: 21}] | filter adult @ :name
 [ 'B' ]
@@ -157,7 +157,7 @@ Named commands work in higher-order commands:
 
 Use `call` when a pipeline returns a function value:
 
-```coffee
+```hashpipe
 #| def add { $n | {| + $n } }
 #| 10 | call $(add 5)
 15
@@ -167,20 +167,20 @@ Use `call` when a pipeline returns a function value:
 
 Load `files` explicitly in scripts. The REPL preloads it by default.
 
-```coffee
+```hashpipe
 #| use files
 #| files.cat names.txt | split '\n' | match Jane | sort
 ```
 
 Write transformed output:
 
-```coffee
+```hashpipe
 #| "one\ntwo\nthree" | upper | files.write out.txt
 ```
 
 List files and directories:
 
-```coffee
+```hashpipe
 #| files.ls . @ files
 ```
 
@@ -188,17 +188,15 @@ List files and directories:
 
 The `csv` module turns a list of objects into CSV text.
 
-```coffee
+```hashpipe
 #| use csv files
 #| [{name: "Ada", score: 12}, {name: "Bea", score: 9}] | csv.json2csv
-name,score
-"Ada",12
-"Bea",9
+'name,score\n"Ada",12\n"Bea",9'
 ```
 
 Pipe the result to `files.write` to save it:
 
-```coffee
+```hashpipe
 #| [{name: "Ada", score: 12}] | csv.json2csv | files.write scores.csv
 ```
 
@@ -206,7 +204,7 @@ Pipe the result to `files.write` to save it:
 
 The `html` module can select elements or extract readable text.
 
-```coffee
+```hashpipe
 #| use html
 #| "<h1>Hello</h1><p>World</p>" | html.html2text
 'Hello ... World'
@@ -220,14 +218,14 @@ The `html` module can select elements or extract readable text.
 `tee` and `inspect` print without changing the value flowing through the
 pipeline.
 
-```coffee
+```hashpipe
 #| [{n: 1}, {n: 2}] | tee | map {| @ n | * 10 }
 [ 10, 20 ]
 ```
 
 Use `which` to explain command resolution:
 
-```coffee
+```hashpipe
 #| which upper
 { command: 'upper', type: 'builtin' }
 ```
