@@ -553,6 +553,31 @@ export async function doCmd(_args: any[], inp: any, ctx: Scope): Promise<any> {
         }
     }
 
+    // Commands may follow either side of the module contract: return a
+    // value/promise, or declare the classic 4th (inp, args, ctx, cb)
+    // callback parameter. A returned promise wins if it settles first.
+    const callFn = (resolved: (...a: any[]) => any) =>
+        invoke(() => {
+            if (resolved.length < 4) {
+                return resolved(inp, args, ctx)
+            }
+            return new Promise((resolve, reject) => {
+                let settled = false
+                const cb = (err: any, val?: any) => {
+                    if (settled) return
+                    settled = true
+                    if (err != null) reject(err)
+                    else resolve(val)
+                }
+                // cb-style functions may return junk (timer handles etc.);
+                // only a returned promise can settle the command
+                const ret = resolved(inp, args, ctx, cb)
+                if (ret != null && typeof ret.then === "function") {
+                    ret.then((v: any) => cb(null, v), cb)
+                }
+            })
+        })
+
     if (cmd instanceof Lambda) {
         return invoke(() => cmd.call(inp, args))
     }
@@ -564,10 +589,9 @@ export async function doCmd(_args: any[], inp: any, ctx: Scope): Promise<any> {
         if (resolved instanceof Lambda) {
             return invoke(() => resolved.call(inp, args))
         }
-        return invoke(() => resolved(inp, args, ctx))
+        return callFn(resolved)
     } else if ((fn = builtins[cmd])) {
-        const resolved = fn
-        return invoke(() => resolved(inp, args, ctx))
+        return callFn(fn)
     }
     throw `No command ${cmd}. `
 }

@@ -38,6 +38,18 @@ beforeAll(() => {
         path.join(fixtureDir, "upper.js"),
         `exports.upper = async () => "shadowed-by-module"\n`,
     )
+    // Classic callback-contract module: (inp, args, ctx, cb)
+    fs.writeFileSync(
+        path.join(fixtureDir, "cbmod.js"),
+        [
+            `exports.double = (inp, args, ctx, cb) =>`,
+            `    setTimeout(() => cb(null, inp * 2), 5)`,
+            `exports.boom = (inp, args, ctx, cb) =>`,
+            `    setTimeout(() => cb("kaboom"), 5)`,
+            `exports.sync3 = (inp, args, ctx) => inp + 1`,
+            ``,
+        ].join("\n"),
+    )
     fs.mkdirSync(npmPkgDir, { recursive: true })
     fs.writeFileSync(
         path.join(npmPkgDir, "package.json"),
@@ -120,6 +132,30 @@ describe("module search path", () => {
         await expect(execFresh(`use no-such-mod-xyz`)).rejects.toMatch(
             /Tried:.*hashpipe-no-such-mod-xyz/s,
         )
+    })
+})
+
+describe("callback-style module contract", () => {
+    // Modules.md documents (inp, args, ctx, cb); commands that declare the
+    // 4th param must still work alongside promise-style commands
+    test("cb(null, value) resolves the pipeline", async () => {
+        const result = await execFresh(
+            `use ${fixtureDir}/cbmod.js ; 21 | cbmod.double`,
+        )
+        expect(result).toEqual(42)
+    })
+
+    test("cb(err) rejects with the command error", async () => {
+        await expect(
+            execFresh(`use ${fixtureDir}/cbmod.js ; 1 | cbmod.boom`),
+        ).rejects.toMatch(/kaboom/)
+    })
+
+    test("promise-style commands in the same module still work", async () => {
+        const result = await execFresh(
+            `use ${fixtureDir}/cbmod.js ; 41 | cbmod.sync3`,
+        )
+        expect(result).toEqual(42)
     })
 })
 
