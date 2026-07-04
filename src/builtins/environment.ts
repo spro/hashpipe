@@ -1,6 +1,7 @@
 import type { Pipeline } from "../pipeline"
 import { Lambda, command } from "../helpers"
 import { BuiltinMap } from "./common"
+import { isObject, isString } from "../utils/lang"
 
 // State management and module loading helpers that mutate the scope.
 
@@ -96,10 +97,17 @@ const environmentBuiltins: BuiltinMap = {
         }
     }),
     aliases: command((inp, args, ctx) => {
-        if (!inp) {
+        // Only a map of alias scripts imports (every value a string);
+        // piped command results and anything else fall through to
+        // listing. The REPL pipes the previous result in, so `aliases`
+        // right after another command must still list.
+        const entries = isObject(inp) ? Object.entries(inp) : []
+        const isAliasMap =
+            entries.length > 0 && entries.every(([, v]) => isString(v))
+        if (!isAliasMap) {
             return ctx.get("aliases")
         }
-        for (const [alias, script] of Object.entries(inp)) {
+        for (const [alias, script] of entries) {
             ctx.alias(alias, script as string)
         }
         return {

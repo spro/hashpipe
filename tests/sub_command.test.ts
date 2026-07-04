@@ -144,6 +144,45 @@ describe("Hashpipe Pipeline Tests", () => {
         expect(result).toEqual(")=fromage")
     })
 
+    test("interp_no_reexpand - substituted values are not re-scanned", async () => {
+        // Data containing '$' (here arriving through a variable, as API
+        // data would) must not re-expand when interpolated
+        const cmd = `echo US\\$5 | set money ; echo cost: $money`
+        const result = await execScript(cmd)
+        expect(result).toEqual("cost: US$5")
+    })
+
+    test("escd_dollar_midword - \\$ splices a literal dollar before a var", async () => {
+        const cmd = `$n = 12 ; echo \\$$n`
+        const result = await execScript(cmd)
+        expect(result).toEqual("$12")
+    })
+
+    test("float_args - decimal arguments are numbers", async () => {
+        const result = await execScript(`list 1 2.5 3`)
+        expect(result).toEqual([1, 2.5, 3])
+    })
+
+    test("float_val - a lone decimal argument stays numeric", async () => {
+        const result = await execScript(`val 5.25`)
+        expect(result).toEqual(5.25)
+    })
+
+    test("aliases_list_ignores_result_objects - piped command results do not become alias imports", async () => {
+        const result = await execScript(
+            `alias sevens = * 7 ; {count: 5, alias: "x"} | aliases`,
+        )
+        expect(Object.keys(result)).toContain("sevens")
+        expect(Object.keys(result)).not.toContain("count")
+    })
+
+    test("aliases_import_still_works - string maps still import", async () => {
+        const result = await execScript(
+            `{double: "* 2"} | aliases ; 5 | double`,
+        )
+        expect(result).toEqual(10)
+    })
+
     test("vars - setting and using variables", async () => {
         const cmd = `$frank = 5 ; echo $frank`
         showParsed(cmd)

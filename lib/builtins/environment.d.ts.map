@@ -1,1 +1,1 @@
-{"version":3,"file":"environment.d.ts","sourceRoot":"","sources":["../../src/builtins/environment.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,UAAU,EAAE,MAAM,UAAU,CAAA;AAIrC,QAAA,MAAM,mBAAmB,EAAE,UAuG1B,CAAA;AAED,eAAe,mBAAmB,CAAA"}
+{"version":3,"file":"environment.d.ts","sourceRoot":"","sources":["../../src/builtins/environment.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,UAAU,EAAE,MAAM,UAAU,CAAA;AAKrC,QAAA,MAAM,mBAAmB,EAAE,UA8G1B,CAAA;AAED,eAAe,mBAAmB,CAAA"}

@@ -304,58 +304,36 @@ export async function runPipeline(
                     return qargs.join(" ")
                 }
             } else if (isString(arg)) {
-                // Int replacement
-                const intMatch = arg.match(/^-?[0-9]+$/)
-                if (intMatch) {
-                    arg = parseInt(arg)
+                // Numeric literals (ints and decimals) become numbers
+                if (arg.match(/^-?[0-9]+(\.[0-9]+)?$/)) {
+                    return Number(arg)
                 }
-                // Non replacement (escaped)
-                else if (arg.match(/\\\$[a-zA-Z0-9_-]*$/)) {
-                    arg = arg.slice(1)
+                // Interpolation is single-pass: \$ is a literal dollar,
+                // a lone $var / ${var} passes its value through with its
+                // type intact, and substituted values are never re-scanned
+                // (so data containing '$' cannot re-expand).
+                const ESC = "\u0000"
+                const masked = arg.replace(/\\\$/g, ESC)
+                const lone = masked.match(
+                    /^(?:\$\{([!a-zA-Z0-9_-]+)\}|\$([!a-zA-Z0-9_-]+))$/,
+                )
+                if (lone) {
+                    const key = lone[1] ?? lone[2]
+                    return key === "!" ? inp : ctx.get("vars", key)
                 }
-                // Within string replacement
-                else {
-                    // Braced ${var} splices explicitly without eating a
-                    // suffix: ${file}_v2 expands $file then appends _v2
-                    let braced: RegExpMatchArray | null
-                    while (
-                        typeof arg === "string" &&
-                        (braced = arg.match(/\$\{([!a-zA-Z0-9_-]+)\}/))
-                    ) {
-                        const key = braced[1]
-                        const val = key === "!" ? inp : ctx.get("vars", key)
-                        // A lone variable passes its value through with
-                        // its type intact (objects stay objects)
-                        if (arg === braced[0]) {
-                            arg = val
-                            break
-                        }
-                        arg = arg.replace(braced[0], () => String(val))
-                    }
-                    let $key: RegExpMatchArray | null
-                    while (
-                        typeof arg === "string" &&
-                        ($key = arg.match(/\$[!a-zA-Z0-9_-]+/))
-                    ) {
-                        const key_str = $key[0]
-                        let val: any
-                        if (key_str === "$!") {
-                            val = inp
-                        } else {
-                            const key = key_str.slice(1)
-                            val = ctx.get("vars", key)
-                        }
-                        // A lone variable passes its value through with
-                        // its type intact (objects stay objects)
-                        if (arg === key_str) {
-                            arg = val
-                            break
-                        }
-                        // Function form so values containing $& and
-                        // friends are inserted verbatim
-                        arg = arg.replace(key_str, () => String(val))
-                    }
+                if (masked.includes("$") || masked.includes(ESC)) {
+                    // ${file}_v2 splices without eating the suffix
+                    const replaced = masked.replace(
+                        /\$\{([!a-zA-Z0-9_-]+)\}|\$([!a-zA-Z0-9_-]+)/g,
+                        (_m, bracedKey, bareKey) => {
+                            const key = bracedKey ?? bareKey
+                            const val = key === "!" ? inp : ctx.get("vars", key)
+                            return String(val)
+                        },
+                    )
+                    return replaced.replace(new RegExp(ESC, "g"), "$")
                 }
+                return arg
             }
             return arg
         }
