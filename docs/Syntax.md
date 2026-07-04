@@ -630,6 +630,26 @@ the full input.
   self: { name: 'Fred', age: 42, happy: true } } 
 ```
 
+### Variables in multi-gets
+
+A multi-get value may also be a variable, splicing a value from scope into the
+result instead of reading from the input. A trailing path descends into the
+variable's value, and `$!` is the input itself.
+
+```hashpipe
+#| $city = "Osaka"
+#| $fred @ {name, city: $city}
+{ name: 'Fred', city: 'Osaka' }
+
+#| $home = {city: "Osaka", country: "JP"}
+#| $fred @ [name, $home.city]
+[ 'Fred', 'Osaka' ]
+
+#| $fred @ {name, self: $!}
+{ name: 'Fred',
+  self: { name: 'Fred', age: 42, happy: true } }
+```
+
 ### Sub-pipes as '@'-expressions
 
 Transformations may be applied by using sub-pipes as `@`-expressions. Most

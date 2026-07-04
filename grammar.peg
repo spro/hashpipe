@@ -24,17 +24,22 @@ at = space "@" space
 
 at_word = ls:letter+ { return ls.join(''); }
 
+// A bare $var (optionally with a trailing path, e.g. $where.city) used as
+// a template value: resolved from scope instead of the object being
+// reshaped. $! is the object itself.
+at_var = v:var_word tail:do_section* { return {var: v, path: tail}; }
+
 at_array = open_bracket
     values:(
-        head:at_expression
-        tail:(comma t:at_expression { return t; })*
+        head:(at_var / at_expression)
+        tail:(comma t:(at_var / at_expression) { return t; })*
         { return [head].concat(tail); }
     )
     close_bracket { return values; }
 
 okv =
-    k:at_word col v:(sub_cmd / at_expression) { return {key: k, val: v}; }
-    / k:sub_cmd col v:(sub_cmd / at_expression) { return {key: [k], val: v}; }
+    k:at_word col v:(sub_cmd / at_var / at_expression) { return {key: k, val: v}; }
+    / k:sub_cmd col v:(sub_cmd / at_var / at_expression) { return {key: [k], val: v}; }
     / k:at_word { return {key: k, val: [{get: k}]}; }
 
 at_obj = "{" space ss:(okv comma?)+ space "}" {

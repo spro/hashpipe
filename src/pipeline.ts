@@ -647,7 +647,9 @@ async function descendObj(
     else if (Array.isArray(step.get)) {
         const result = await Promise.all(
             (step.get as any[]).map((step_expr: any) =>
-                descendObj(obj, step_expr, ctx),
+                step_expr?.var != null
+                    ? resolveTemplateVar(step_expr, obj, ctx)
+                    : descendObj(obj, step_expr, ctx),
             ),
         )
         return finish(result)
@@ -662,7 +664,9 @@ async function descendObj(
                 const value =
                     set.val.sub != null
                         ? await runPipelines(set.val.sub, obj, ctx)
-                        : await descendObj(obj, set.val, ctx)
+                        : set.val.var != null
+                          ? await resolveTemplateVar(set.val, obj, ctx)
+                          : await descendObj(obj, set.val, ctx)
                 return { key, val: value }
             }),
         )
@@ -676,6 +680,20 @@ async function descendObj(
     else {
         return finish(accessor(obj, step.get))
     }
+}
+
+// A $var template value: resolve from scope ($! is the object being
+// reshaped), then follow any trailing path ($where.city)
+async function resolveTemplateVar(
+    tok: { var: string; path?: any[] },
+    obj: any,
+    ctx: Scope,
+): Promise<any> {
+    const base = tok.var === "$!" ? obj : ctx.get("vars", tok.var.slice(1))
+    if (tok.path && tok.path.length) {
+        return descendObj(base, tok.path, ctx)
+    }
+    return base
 }
 
 function isSliceAccessor(key: any): key is SliceAccessor {
