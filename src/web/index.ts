@@ -33,7 +33,22 @@ function httpCommand(method: string): HashpipeFunction {
         } catch {
             // leave as text
         }
-        if (!res.ok) throw new Error("HTTP " + res.status + " for " + url)
+        if (!res.ok) {
+            // Structured, pipeable error matching the node http module:
+            // |? receives it as input, so `|? @ status` works
+            throw {
+                error:
+                    "HTTP " +
+                    res.status +
+                    (res.statusText ? " " + res.statusText : "") +
+                    " from " +
+                    url,
+                status: res.status,
+                statusText: res.statusText,
+                url: url,
+                body: data,
+            }
+        }
         return data
     })
 }

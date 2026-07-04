@@ -195,24 +195,40 @@
         append(entry)
 
         input.disabled = true
-        shell.exec(script, function (err, data) {
+        function finish() {
             clearInterval(spinner)
             entry.removeChild(pending)
-            if (err != null) {
-                var errLine = div("error")
-                errLine.textContent = "[ERROR] " + err
-                entry.appendChild(errLine)
-            } else if (Hashpipe.HelpPage && data instanceof Hashpipe.HelpPage) {
-                renderHelp(entry, data)
-            } else if (data != null) {
-                var out = div("output")
-                renderInto(out, data, 0)
-                entry.appendChild(out)
-            }
             input.disabled = false
             input.focus()
             scrollToPrompt()
-        })
+        }
+        shell.exec(script).then(
+            function (data) {
+                finish()
+                if (Hashpipe.HelpPage && data instanceof Hashpipe.HelpPage) {
+                    renderHelp(entry, data)
+                } else if (data != null) {
+                    var out = div("output")
+                    renderInto(out, data, 0)
+                    entry.appendChild(out)
+                }
+                scrollToPrompt()
+            },
+            function (err) {
+                finish()
+                var errLine = div("error")
+                // Structured errors (e.g. http status objects) render as
+                // values so their fields are readable
+                if (err != null && typeof err === "object" && !(err instanceof Error)) {
+                    errLine.appendChild(span(null, "[ERROR] "))
+                    renderInto(errLine, err, 0)
+                } else {
+                    errLine.textContent = "[ERROR] " + err
+                }
+                entry.appendChild(errLine)
+                scrollToPrompt()
+            },
+        )
     }
 
     function submit() {
@@ -269,6 +285,114 @@
             run(example.textContent)
         })
     })
+
+    // ---- examples panel ----
+
+    // Curated examples, grouped; every command verified against the
+    // interpreter (see docs/syntax-probes.html for the probe runs)
+    var EXAMPLES = [
+        {
+            title: "reshaping json",
+            items: [
+                {
+                    cmd: '{id: 7, title: "Hello", by: "sam", score: 42} @ {title, author: by}',
+                    note: "pick and rename fields with an @ template",
+                },
+                {
+                    cmd: '$city = "Osaka" ; {name: "Fred", age: 42} @ {name, from: $city}',
+                    note: "splice variables straight into templates",
+                },
+                {
+                    cmd: "range 10 @ 2..5",
+                    note: "slices are end-exclusive; negatives count from the end",
+                },
+                {
+                    cmd: '["alpha", "beta", "gamma"] || upper @ 0..2',
+                    note: "a suffix applies within its || section — here, each string",
+                },
+            ],
+        },
+        {
+            title: "live apis",
+            items: [
+                {
+                    cmd: '$hn = "https://hacker-news.firebaseio.com/v0" ; get $hn/topstories.json @ 0..5 || get $hn/item/$!.json @ {title, score}',
+                    note: "hacker news front page: five fetches in parallel",
+                },
+                {
+                    cmd: '["pikachu", "snorlax"] || get pokeapi.co/api/v2/pokemon/$! @ {name, weight}',
+                    note: "$! is the current item inside a || section",
+                },
+                {
+                    cmd: 'def crawl { $url | $page = get $url ; if $($page @ next) {| crawl $($page @ next) } {| $page @ results:name } } ; crawl "https://pokeapi.co/api/v2/pokemon?limit=500" | length',
+                    note: "recursive pagination: follow next links to the last page",
+                },
+            ],
+        },
+        {
+            title: "functions",
+            items: [
+                {
+                    cmd: "def fact { $n | if $($n <= 1) {| 1 } {| $n * $(fact $($n - 1)) } } ; fact 5",
+                    note: "recursion with lazy if branches",
+                },
+                {
+                    cmd: "[1, 2, 3, 4] | reduce { $acc | $acc + $! } 0",
+                    note: "reduce with a named accumulator",
+                },
+                {
+                    cmd: '[{name: "sparky", age: 58}, {name: "woofer", age: 6}] | sortBy {| @ age } @ :name',
+                    note: "lambdas as sort keys",
+                },
+            ],
+        },
+        {
+            title: "errors",
+            items: [
+                {
+                    cmd: "get httpbingo.org/status/418 |? @ status",
+                    note: "http errors carry their status; |? catches and pipes them",
+                },
+                {
+                    cmd: "[{a: 1}, {a: 2}] @ a",
+                    note: "shape mistakes fail loudly and name the fix",
+                },
+            ],
+        },
+    ]
+
+    function showExamples() {
+        var entry = div("entry")
+        var panel = div("help")
+        EXAMPLES.forEach(function (section) {
+            var title = div("help-title")
+            title.textContent = section.title
+            panel.appendChild(title)
+            section.items.forEach(function (ex) {
+                var row = div("help-example")
+                var chip = document.createElement("code")
+                chip.className = "example"
+                chip.textContent = ex.cmd
+                chip.addEventListener("click", function () {
+                    saveHistory(ex.cmd)
+                    run(ex.cmd)
+                })
+                row.appendChild(chip)
+                row.appendChild(span("help-note", ex.note))
+                panel.appendChild(row)
+            })
+        })
+        entry.appendChild(panel)
+        append(entry)
+    }
+
+    var moreExamples = document.getElementById("more-examples")
+    if (moreExamples) {
+        moreExamples.addEventListener("click", function (e) {
+            e.preventDefault()
+            showExamples()
+        })
+    }
 
     // ---- welcome ----
 
