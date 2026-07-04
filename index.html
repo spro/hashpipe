@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 <title>hashpipe — a JSON shell for the web</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='0' y='13' font-size='11' fill='%2356c8d8' font-family='monospace'>%23|</text></svg>">
-<link rel="stylesheet" href="repl.css?v=8">
+<link rel="stylesheet" href="repl.css?v=9">
 </head>
 <body>
 
@@ -32,13 +32,15 @@
   <span class="try">try:</span>
   <code class="example">get spro.github.io/hashpipe/about.json</code>
   <code class="example">[1, 2, 3, 4] || * 5</code>
-  <code class="example">echo john jacob jingleheimer | split ' ' || upper</code>
+  <code class="example">$city = "Osaka" ; {name: "Fred", age: 42} @ {name, from: $city}</code>
   <code class="example">def dog-years { $n | $n * 7 } ; dog-years 6</code>
   <code class="example">get api.github.com/repos/spro/hashpipe @ {name, stars: stargazers_count, language}</code>
   <code class="example">[{name: 'sparky', age: 58}, {name: 'woofer', age: 6}] | filter {| $(@ age) > 30 } @ :name</code>
+  <code class="example">get httpbingo.org/status/418 |? @ status</code>
+  <a href="#" id="more-examples">more examples ▸</a>
 </footer>
 
-<script src="hashpipe.js?v=8"></script>
-<script src="repl.js?v=8"></script>
+<script src="hashpipe.js?v=9"></script>
+<script src="repl.js?v=9"></script>
 </body>
 </html>

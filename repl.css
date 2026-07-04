@@ -163,6 +163,16 @@ footer .try { margin-right: 8px; }
   color: #d6dbe2;
 }
 
+#more-examples {
+  display: inline-block;
+  margin: 3px 0;
+  color: #56c8d8;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#more-examples:hover { text-decoration: underline; }
+
 @media (max-width: 600px) {
   header {
     padding: 12px 14px 8px;
