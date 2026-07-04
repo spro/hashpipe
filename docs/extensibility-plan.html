@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Hashpipe Extensibility — Fix Plans</title>
+<title>Hashpipe Extensibility — Current Status</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -121,8 +121,8 @@
 
 <header>
   <div class="container">
-    <h1>hashpipe <span class="pipe">#|</span> extensibility fix plans</h1>
-    <p class="sub">Six findings from the grammar/docs/runtime review, each with a concrete implementation plan. Generated 2026-06-11 · rev 2: lambdas + def merged into one functions workstream.</p>
+    <h1>hashpipe <span class="pipe">#|</span> extensibility status</h1>
+    <p class="sub">Six findings from the grammar/docs/runtime review, updated to reflect the shipped implementation. Generated 2026-06-11 · rev 4: current as of 2026-06-21.</p>
   </div>
 </header>
 
@@ -146,7 +146,7 @@
 <p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b>, <b>src/builtins/core.ts</b>, <b>src/builtins/collections.ts</b>, <b>src/builtins/environment.ts</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-11</span> — tests in tests/lambda.test.ts (50 cases), docs in Syntax.md § Expressions + § Functions. The design below reflects the final shipped syntax, revised twice during review. Notes: sortBy/groupBy accept lambdas only (strings stay key names); the legacy JS-string filter form is retained without a deprecation warning for now.</p>
 
 <h3>Problem</h3>
-<p>Every argument is evaluated before the command runs (<code>$()</code> sub-pipes are call-by-value), so no command can receive an unevaluated pipeline. Control flow can't be written in the language: <code>if</code> evaluates both branches, and <code>filter</code> escapes to raw JS via <code>new Function</code> (collections.ts:233–234). The only abstraction mechanism, <code>alias</code>, is a grammar special case — the body is captured as raw text <code>[^;]+</code> (grammar.peg:150) so it can't contain <code>;</code>, <code>runPipeline</code> carries a matching magic-string check (pipeline.ts:278), and <code>through()</code> appends call-site args only to the first command, so aliases are effectively zero-arg. The only path to a parameterized command today is a TypeScript module.</p>
+<p>Before this work, every argument was evaluated before the command ran (<code>$()</code> sub-pipes were call-by-value), so no command could receive an unevaluated pipeline. Control flow could not be written in the language: <code>if</code> evaluated both branches, and <code>filter</code> escaped to raw JS via <code>new Function</code> (collections.ts:233–234). The only abstraction mechanism, <code>alias</code>, was a grammar special case — the body was captured as raw text <code>[^;]+</code> (grammar.peg:150) so it could not contain <code>;</code>, <code>runPipeline</code> carried a matching magic-string check (pipeline.ts:278), and <code>through()</code> appended call-site args only to the first command, so aliases were effectively zero-arg. The only path to a parameterized command was a TypeScript module.</p>
 
 <h3>Design</h3>
 <p>One mechanism, two surfaces. A <strong>function value</strong> — an unevaluated pipeline with a captured scope and an optionally named input — is the runtime primitive. It can be created two ways:</p>
@@ -159,7 +159,7 @@
 
 <div class="ba">
   <div class="cell b">
-    <div class="ba-label before">Before — today</div>
+    <div class="ba-label before">Before — old behavior</div>
     <pre><code><span class="comment"># predicates escape to raw JavaScript:</span>
 #| $people | filter 'i.age &gt; 30'
 
@@ -188,7 +188,7 @@
 
 <div class="ba">
   <div class="cell b">
-    <div class="ba-label before">Before — alias today</div>
+    <div class="ba-label before">Before — alias behavior</div>
     <pre><code><span class="comment"># aliases are zero-arg; call-site args are</span>
 <span class="comment"># blindly appended to the FIRST command:</span>
 #| alias sevens = * 7
@@ -220,7 +220,7 @@
   </div>
 </div>
 
-<h3>Plan</h3>
+<h3>Shipped Details</h3>
 <ol class="steps">
   <li><strong>Grammar (as shipped):</strong> <code>lambda = "{" space params:lambda_params? "|" space body:pipelines space "}"</code> where <code>lambda_params</code> is one or more <code>$</code>-sigiled names before the first pipe. Returns <code>{fn: body, params: [...], src: text()}</code>. <code>lambda</code> added to <code>cmd_phrase</code> and <code>start_cmd</code>.</li>
   <li><strong>Runtime value (as shipped):</strong> a <code>Lambda</code> class in helpers.ts (the pipeline runner is injected via <code>setLambdaRunner</code> to avoid a circular import); <code>replaceArg</code> constructs it from the grammar token, capturing the defining scope.</li>
@@ -228,9 +228,9 @@
   <li><strong><code>def</code> builtin</strong> (environment.ts): <code>def name {| ... }</code> → <code>ctx.topScope().set("fns", name, lambda)</code>; rejects non-lambda bodies.</li>
   <li><strong>doCmd integration:</strong> a resolved <code>fn</code> that is a <code>Lambda</code> routes through <code>.call</code>. A <code>call</code> builtin (<code>call $f a b</code>) invokes a value explicitly.</li>
   <li><strong>Function-name references:</strong> add a <code>resolveCallable(arg, ctx)</code> helper — lambda value passes through; bare string tries <code>ctx.get("fns", arg)</code>; used by every higher-order builtin so <code>filter adult</code> and <code>filter {| ... |}</code> both work.</li>
-  <li><strong>Reimplement <code>alias</code>:</strong> keep the <code>alias name = body</code> grammar sugar for back-compat, but desugar to a def whose body is parsed tokens (not raw text) with trailing <code>$args</code> appended to the first command — preserving today's behavior while gaining multi-pipeline bodies and shadowability. Relax the <code>[^;]+</code> capture to a real <code>pipelines</code> rule, and delete the <code>cmd_args[0] === "alias"</code> magic string in <code>parseArgs</code> (pipeline.ts:278).</li>
-  <li><strong>Retrofit builtins:</strong> <code>if cond $then $else</code> (lazy branches), <code>filter</code> (drop the <code>new Function</code> path, keep the old string form temporarily behind a deprecation warning), new <code>map</code>, <code>reduce</code>, <code>each</code>; <code>sortBy</code>/<code>groupBy</code> accept callables.</li>
-  <li><strong>Tests:</strong> parse round-trips; closure capture (lambda reads a var from defining scope after scope exits); param binding; lambdas stored in vars, passed through <code>||</code>, nested in <code>@</code> sub-expressions; bare-name resolution in <code>filter</code>; <code>if</code>/<code>filter</code> laziness (side-effect counter via <code>inc</code> proves the untaken branch never ran); existing alias tests pass unchanged (back-compat gate); alias bodies containing <code>;</code>; <code>aliases</code> persistence round-trip.</li>
+  <li><strong><code>alias</code> compatibility:</strong> <code>alias name = body</code> remains a single-pipeline shortcut that stops at <code>;</code>. The body is parsed into an unevaluated lambda token so definition-time substitution does not happen, while call-site args are still appended to the first command to preserve classic alias behavior. Multi-pipeline and named-parameter workflows use <code>def</code>.</li>
+  <li><strong>Retrofit builtins:</strong> <code>if cond $then $else</code> uses lazy lambda branches; <code>filter</code>, <code>map</code>, <code>reduce</code>, <code>each</code>, <code>sortBy</code>, and <code>groupBy</code> accept callables.</li>
+  <li><strong>Tests:</strong> parse round-trips; closure capture; param binding; lambdas stored in vars, passed through <code>||</code>, nested in <code>@</code> sub-expressions; bare-name resolution in higher-order commands; lazy branch behavior; alias script reporting; alias call-site args; alias bodies stopping at semicolon; and <code>aliases</code> persistence.</li>
 </ol>
 
 <div class="panel risk">
@@ -254,17 +254,17 @@
 
 <!-- ============================================================ -->
 <h2 id="f2"><span class="num">2</span> Pipe-operator registry + error pipe <code>|?</code></h2>
-<p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b> &nbsp;·&nbsp; Effort: <span class="effort m">MEDIUM</span></p>
+<p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — tests in tests/pipes.test.ts cover normal, parallel, series, and error pipes. The shipped registry uses operator-string token types (<code>|</code>, <code>||</code>, <code>|=</code>, <code>|?</code>); module-provided operators remain a stretch item.</p>
 
 <h3>Problem</h3>
 <p>A new pipe type touches four grammar rules (token, <code>Xpiped_cmd</code>, ordering-sensitive <code>cmd_section</code> alternation) plus the hardcoded <code>cmd_type</code> if/else chain in <code>runPipeline</code> (pipeline.ts:370–419). Separately, the language has no error channel — any failed stage aborts the pipeline.</p>
 
-<h3>Plan</h3>
+<h3>Shipped Details</h3>
 <ol class="steps">
   <li><strong>Grammar — one generic rule</strong> replacing <code>pipe</code>/<code>ppipe</code>/<code>spipe</code> + the three <code>*piped_cmd</code> rules:
 <div class="ba">
   <div class="cell b">
-    <div class="ba-label before">Before — grammar.peg today</div>
+    <div class="ba-label before">Before — old grammar.peg</div>
     <pre><code>pipe  = space "|" space
 ppipe = space "||" space
 spipe = space "|=" space
@@ -281,7 +281,7 @@ cmd_section = start_cmd / ppiped_cmd
             / spiped_cmd / piped_cmd</code></pre>
   </div>
   <div class="cell a">
-    <div class="ba-label after">After — proposed</div>
+    <div class="ba-label after">After — shipped</div>
     <pre><code>pipe_op = space "|" suffix:[|=?&amp;^~]? space
   { return "|" + (suffix || ""); }
 
@@ -293,21 +293,24 @@ cmd_section = start_cmd / piped_cmd</code></pre>
 </div>
 PEG longest-match handles <code>||</code> vs <code>|</code> naturally; the ordering hazard in <code>cmd_section</code> disappears. Token types become the operator strings themselves (<code>"|"</code>, <code>"||"</code>, <code>"|="</code>) — a small mechanical migration from <code>"pipe"/"ppipe"/"spipe"</code>.</li>
   <li><strong>Runtime registry:</strong>
-<pre><code>type PipeHandler = (cmd_args: any[], inp: any, ctx: Scope,
-                    runStage: (args: any[], inp: any, cb: Callback) =&gt; void,
-                    cb: Callback) =&gt; void
+<pre><code>type PipeHandler = (
+  inp: any,
+  ctx: Scope,
+  runStage: (inp: any) =&gt; Promise&lt;any&gt;,
+) =&gt; Promise&lt;any&gt;
 
 const pipeHandlers: Record&lt;string, PipeHandler&gt; = {
-  "|":  (args, inp, ctx, run, cb) =&gt; run(args, inp, cb),
-  "||": (args, inp, ctx, run, cb) =&gt; async.map(inp, (i, c) =&gt; run(args, i, c), cb),
-  "|=": (args, inp, ctx, run, cb) =&gt; async.mapSeries(inp, (i, c) =&gt; run(args, i, c), cb),
+  "|":  (inp, ctx, run) =&gt; run(inp),
+  "|?": (inp, ctx, run) =&gt; run(inp),
+  "||": (inp, ctx, run) =&gt; Promise.all(inp.map(run)),
+  "|=": async (inp, ctx, run) =&gt; { ... },
 }
 export function registerPipeOperator(op: string, h: PipeHandler) { ... }</code></pre>
-<code>runPipeline</code>'s if/else chain collapses to a registry lookup; <code>runStage</code> closes over <code>parseArgs</code> + <code>doCmd</code> so handlers stay simple.</li>
-  <li><strong>Error routing:</strong> change the inter-stage continuation (pipeline.ts:360) so an error doesn't abort blindly: if <code>err</code> and the <em>next</em> token's type is <code>"|?"</code>, invoke that stage with the error as input and clear the error; otherwise propagate as today. Then register <code>"|?"</code> as a normal handler. This is the proof the registry works:
+<code>runPipeline</code>'s if/else chain collapses to a registry lookup; <code>runStage</code> closes over argument parsing and command execution so handlers stay simple.</li>
+  <li><strong>Error routing:</strong> change the inter-stage continuation (pipeline.ts:360) so an error doesn't abort blindly: if <code>err</code> and the <em>next</em> token's type is <code>"|?"</code>, invoke that stage with the error as input and clear the error; otherwise propagate normally. Then register <code>"|?"</code> as a normal handler. This is the proof the registry works:
 <div class="ba">
   <div class="cell b">
-    <div class="ba-label before">Before — today</div>
+    <div class="ba-label before">Before — old behavior</div>
     <pre><code><span class="comment"># any failed stage aborts the whole</span>
 <span class="comment"># pipeline; no way to catch or recover:</span>
 #| http.get $url | @ items
@@ -317,7 +320,7 @@ Error executing pipeline: ECONNREFUSED
 <span class="comment"># inside a TypeScript module</span></code></pre>
   </div>
   <div class="cell a">
-    <div class="ba-label after">After — proposed</div>
+    <div class="ba-label after">After — shipped</div>
     <pre><code><span class="comment"># |? catches the upstream error ($! = err):</span>
 #| http.get $url |? echo Request failed: $!
 'Request failed: ECONNREFUSED'
@@ -343,33 +346,33 @@ null
 
 <!-- ============================================================ -->
 <h2 id="f3"><span class="num">3</span> Command lookup order — builtins last</h2>
-<p class="meta">Touches: <b>src/pipeline.ts</b> (doCmd), <b>src/builtins/debug.ts</b> &nbsp;·&nbsp; Effort: <span class="effort s">SMALL</span></p>
+<p class="meta">Touches: <b>src/pipeline.ts</b> (doCmd), <b>src/builtins/meta.ts</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — command lookup now checks the active scope before builtins, and meta helpers expose resolution behavior.</p>
 
 <h3>Problem</h3>
 <p><code>doCmd</code> (pipeline.ts:434) checks <code>builtins[cmd]</code> before the scope chain, so modules, aliases, and user defs can never override a builtin — the root cause behind the "ls is no longer clobbered" class of collisions.</p>
 
-<h3>Plan</h3>
+<h3>Shipped Details</h3>
 <ol class="steps">
   <li><strong>Flip the lookup:</strong> <code>ctx.get("fns", cmd)</code> first, <code>builtins[cmd]</code> as fallback. Two-line change.</li>
-  <li><strong>Preferred end-state (slightly bigger):</strong> seed the Pipeline root scope's <code>fns</code> with all builtins at construction, delete the direct <code>builtins</code> import from <code>doCmd</code>, and let normal scope-chain resolution do everything. One lookup path; shadowing falls out of scoping for free.</li>
-  <li><strong>Escape hatch:</strong> add a <code>builtin</code> command (<code>builtin echo hi</code>) that bypasses the scope chain, and a <code>commands</code>/<code>which</code> introspection builtin showing where a name resolves (builtin / module / alias / def) — mirrors bash <code>type</code>.</li>
-  <li><strong>Tests:</strong> alias shadows builtin and <code>builtin x</code> still reaches the original; <code>use</code>-loaded fn shadows builtin; unshadowed builtins resolve identically to today (run full suite).</li>
+  <li><strong>Escape hatch:</strong> the <code>builtin</code> command (<code>builtin echo hi</code>) bypasses the scope chain, and <code>which</code> reports where a name resolves (builtin / module / alias / def) — mirrors bash <code>type</code>.</li>
+  <li><strong>Collision reporting:</strong> module registration reports shadowed names through the <code>use</code> result.</li>
+  <li><strong>Tests:</strong> alias shadows builtin and <code>builtin x</code> still reaches the original; <code>use</code>-loaded functions shadow builtins; unshadowed builtins resolve identically to before.</li>
 </ol>
 
 <div class="panel risk">
 <h3>Risk</h3>
-<p>Behavioral: a module that accidentally exports <code>get</code>-style generic names now wins over builtins. That's the <em>point</em>, but call it out in the changelog and have <code>use</code> print shadow warnings (pairs with the collision reporting in the deprioritized module-path finding (#6)).</p>
+<p>Behavioral: a module that accidentally exports <code>get</code>-style generic names now wins over builtins. That's the <em>point</em>, and <code>use</code> reports shadow warnings so collisions are visible.</p>
 </div>
 
 <!-- ============================================================ -->
 <h2 id="f5"><span class="num">4</span> Grammar paper cuts</h2>
-<p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b> (parseArgs) &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — tests in tests/grammar.test.ts, docs in Syntax.md (§ Statements and comments, § Variables, § At-expressions). All four landed, with newline-as-separator accepted globally as recommended: statements split on newlines (pipe continuations still span lines because <code>pipe_op</code> and at-expressions consume newlines), <code>#</code> comments at statement position, one generic escape rule (<code>\$</code> keeps its backslash for parseArgs), quoted keys + <code>*</code> wildcard in at-expressions, <code>${var}</code> splicing, typed lone-var pass-through, the <code>$&amp;</code> replace bug fix, a <code>null</code> literal, and the dead <code>bool</code> rule removed. Slices (<code>[0..3]</code>) deferred as planned.</p>
+<p class="meta">Touches: <b>grammar.peg</b>, <b>src/pipeline.ts</b> (parseArgs) &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — tests in tests/grammar.test.ts, docs in Syntax.md (§ Statements and comments, § Variables, § At-expressions). The shipped set includes newline-as-separator globally, <code>#</code> comments at statement position, one generic escape rule (<code>\$</code> keeps its backslash for parseArgs), quoted keys, <code>*</code> wildcard and range slices in at-expressions, <code>${var}</code> splicing, typed lone-var pass-through, the <code>$&amp;</code> replace bug fix, a <code>null</code> literal, and removal of the dead <code>bool</code> rule.</p>
 
 <h3>4a — Comments</h3>
 <p><code>#</code> is in <code>ok_char</code> (URLs contain fragments), so comments must be position-aware, not lexical. Plan: introduce a statement-level rule — <code>comment = space "#" [^\n;]*</code> — allowed wherever a <code>pipeline</code> can appear in the <code>pipelines</code> list, and treat newline as a pipeline separator alongside <code>;</code> in file/<code>--run</code> mode. <code>#</code> mid-word stays a literal character.</p>
 <div class="ba">
   <div class="cell b">
-    <div class="ba-label before">Before — script.hp today</div>
+    <div class="ba-label before">Before — old script.hp</div>
     <pre><code><span class="comment"># this line is a parse error, not a comment</span>
 use http
 http.get http://x.io/page#section
@@ -378,7 +381,7 @@ http.get http://x.io/page#section
 <span class="comment">  with ';'</span></code></pre>
   </div>
   <div class="cell a">
-    <div class="ba-label after">After — proposed</div>
+    <div class="ba-label after">After — shipped</div>
     <pre><code># fetch the section anchor demo
 use http
 http.get http://x.io/page#section
@@ -393,7 +396,7 @@ http.get http://x.io/page#section
 <p>Replace the enumerated escape rules (grammar.peg:72–75) with one generic rule (keep <code>\n</code> → newline in quoted literals). Every future metacharacter is automatically escapable.</p>
 <div class="ba">
   <div class="cell b">
-    <div class="ba-label before">Before — grammar.peg today</div>
+    <div class="ba-label before">Before — old grammar.peg</div>
     <pre><code><span class="comment">// each escape individually enumerated:</span>
 escd_at    = ... "\\@" { return "@"; }
 escd_paren = "\\(" { return "("; }
@@ -406,7 +409,7 @@ escd_char  = escd_at / escd_paren
 #| echo a \| b      <span class="comment"># ✗ parse error</span></code></pre>
   </div>
   <div class="cell a">
-    <div class="ba-label after">After — proposed</div>
+    <div class="ba-label after">After — shipped</div>
     <pre><code><span class="comment">// one rule covers every metacharacter,</span>
 <span class="comment">// present and future:</span>
 escd_char = "\\" c:. { return c; }
@@ -423,7 +426,7 @@ escd_char = "\\" c:. { return c; }
 <p><code>at_word</code> only matches <code>[a-zA-Z0-9_~/-]</code>, so JSON keys with spaces/dots are unreachable. Plan: <code>section = at_obj / at_array / at_quoted / at_word</code> where <code>at_quoted</code> reuses <code>quoted_literal</code> and yields the raw string. Add wildcard: <code>@ :*</code> / <code>@ .*</code> where <code>*</code> in <code>accessor()</code> means <code>Object.values(obj)</code>.</p>
 <div class="ba">
   <div class="cell b">
-    <div class="ba-label before">Before — today</div>
+    <div class="ba-label before">Before — old behavior</div>
     <pre><code><span class="comment"># keys with spaces/dots are unreachable:</span>
 #| {"content type": "json"} @ ???      <span class="comment"># ✗</span>
 #| {"v1.2": "ok"} @ v1.2   <span class="comment"># ✗ '.' parses</span>
@@ -434,7 +437,7 @@ escd_char = "\\" c:. { return c; }
                            <span class="comment">#   'values' cmd</span></code></pre>
   </div>
   <div class="cell a">
-    <div class="ba-label after">After — proposed</div>
+    <div class="ba-label after">After — shipped</div>
     <pre><code><span class="comment"># quoted keys reach any JSON key:</span>
 #| {"content type": "json"} @ "content type"
 'json'
@@ -446,12 +449,12 @@ escd_char = "\\" c:. { return c; }
 [ 1, 2 ]</code></pre>
   </div>
 </div>
-<p>Defer slices (<code>[0..3]</code> range syntax) — nice-to-have, doesn't block anything.</p>
+<p>Range slices shipped too, using <code>@ 1..3</code>, <code>@ ..3</code>, <code>@ 2..</code>, and negative bounds such as <code>@ -3..-1</code>.</p>
 
 <h3>4d — <code>${var}</code> + typed interpolation + replace bug</h3>
 <div class="ba">
   <div class="cell b">
-    <div class="ba-label before">Before — today</div>
+    <div class="ba-label before">Before — old behavior</div>
     <pre><code><span class="comment"># no delimiter form — $foo_bar is</span>
 <span class="comment"># ambiguous, can't splice $foo + "_bar":</span>
 #| echo $file_v2          <span class="comment"># reads var</span>
@@ -463,7 +466,7 @@ escd_char = "\\" c:. { return c; }
 [ '[object Object]' ]     <span class="comment"># type lost</span></code></pre>
   </div>
   <div class="cell a">
-    <div class="ba-label after">After — proposed</div>
+    <div class="ba-label after">After — shipped</div>
     <pre><code><span class="comment"># braces disambiguate:</span>
 #| echo ${file}_v2
 'data.json_v2'
@@ -484,14 +487,14 @@ escd_char = "\\" c:. { return c; }
 
 <!-- ============================================================ -->
 <h2 id="f6"><span class="num">5</span> Docs: module-author guide + Syntax.md gaps</h2>
-<p class="meta">Touches: <b>docs/Modules.md</b> (new), <b>docs/Syntax.md</b>, <b>README.md</b>, <b>CLAUDE.md</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — Modules.md covers the command contract, namespacing, async commands, wrap helpers, and lambda-accepting commands (using the real replace.ts as the minimal example). Syntax.md gained aliases/use, map depth <code>::</code>, and negative indexing (statements/escapes/lambdas/<code>|?</code> had already landed with their features). README got the Extending section and the fixed pipes anchor. CLAUDE.md was rewritten for the completed TypeScript migration.</p>
+<p class="meta">Touches: <b>docs/Modules.md</b> (new), <b>docs/Syntax.md</b>, <b>docs/Commands.md</b>, <b>docs/Cookbook.md</b>, <b>docs/walkthroughs/</b>, <b>README.md</b>, <b>CLAUDE.md</b> &nbsp;·&nbsp; <span class="effort s">SHIPPED 2026-06-12</span> — Modules.md covers the command contract, namespacing, async commands, wrap helpers, and lambda-accepting commands (using the real replace.ts as the minimal example). Syntax.md, Commands.md, Cookbook.md, and the walkthroughs now reflect the modern assignment, lambda, slicing, module, and at-expression syntax. README got the Extending section and the fixed pipes anchor. CLAUDE.md was rewritten for the completed TypeScript migration.</p>
 
-<h3>Plan</h3>
+<h3>Current Docs</h3>
 <ol class="steps">
-  <li><strong>New <code>docs/Modules.md</code>:</strong> the <code>(inp, args, ctx, cb)</code> contract; <code>wrapone</code>/<code>wraponeSync</code>/<code>wrapall</code> from helpers.ts; namespacing rules (default-export object vs named exports, <code>ns.fn</code> + bare-<code>ns</code> shorthand when <code>exportName === namespace</code>); scope/ctx semantics; full worked example (a small <code>weather</code> module) from file → <code>use</code> → call. Update with the #6 search path if/when it lands (currently deprioritized).</li>
-  <li><strong>Syntax.md additions:</strong> <code>;</code> multi-pipelines, <code>alias</code>/<code>aliases</code>, <code>use</code>, escaping rules, map depth (<code>::</code>), negative indexing, <code>$!</code> in at-expression sub-pipes — then new sections as #1/#2 land (lambdas, <code>def</code>, <code>|?</code>).</li>
-  <li><strong>README:</strong> add a "Extending hashpipe" section linking Modules.md; fix the Syntax.md anchor for parallel/series pipes (currently points at <code>#at-expressions</code>).</li>
-  <li><strong>CLAUDE.md refresh:</strong> it still describes root-level <code>*.coffee</code>, <code>modules/</code>, and <code>lib-coffee/</code> — none exist anymore. Update directory map to <code>src/builtins/</code> + <code>src/modules/</code>, drop the coffee build/test instructions if the migration is declared done.</li>
+  <li><strong><code>docs/Modules.md</code>:</strong> covers the <code>(inp, args, ctx, cb)</code> contract; <code>wrapone</code>/<code>wraponeSync</code>/<code>wrapall</code> from helpers.ts; namespacing rules (default-export object vs named exports, <code>ns.fn</code> + bare-<code>ns</code> shorthand when <code>exportName === namespace</code>); scope/ctx semantics; the shipped module search path; and a worked module from file → <code>use</code> → call.</li>
+  <li><strong>Syntax/reference docs:</strong> cover <code>;</code> and newline multi-pipelines, <code>alias</code>/<code>aliases</code>, <code>use</code>, escaping rules, map depth (<code>::</code>), negative indexing, range slices, lambdas, <code>def</code>, and <code>|?</code>.</li>
+  <li><strong>README and walkthroughs:</strong> README links the extending guide and the correct pipes anchor; walkthroughs use modern assignment, object-shaped at-expressions, lambdas/defs, and bounded live API examples.</li>
+  <li><strong>CLAUDE.md refresh:</strong> directory and command guidance now matches the TypeScript layout (<code>src/builtins/</code>, <code>src/modules/</code>, generated <code>lib/</code> output).</li>
 </ol>
 
 <!-- ============================================================ -->
@@ -501,15 +504,15 @@ escd_char = "\\" c:. { return c; }
 <h3>Problem</h3>
 <p><code>use</code> resolves bare names to <code>./modules/</code> inside the installed package (pipeline.ts:139–143). Users can't add a module without publishing it into hashpipe's own <code>lib/</code>.</p>
 
-<h3>Plan</h3>
+<h3>Shipped Details</h3>
 <ol class="steps">
   <li><strong>Resolution order</strong> for <code>use name</code>:
     <ol type="a">
       <li>Explicit path (<code>./x</code>, <code>/x</code>, <code>~/x</code>) → resolve against <code>process.cwd()</code>, expand <code>~</code></li>
       <li>Each dir in <code>HASHPIPE_PATH</code> (colon-separated)</li>
       <li><code>~/.hashpipe/modules/</code></li>
-      <li>Bundled <code>./modules/</code> (today's behavior)</li>
-      <li>npm: <code>hashpipe-&lt;name&gt;</code> then <code>&lt;name&gt;</code>, via <code>module.createRequire(process.cwd() + "/")</code> so local <code>node_modules</code> works</li>
+      <li>Bundled package modules</li>
+      <li>npm: <code>hashpipe-&lt;name&gt;</code> only, via <code>module.createRequire(process.cwd() + "/")</code> so local <code>node_modules</code> works</li>
     </ol></li>
   <li><strong>Implementation:</strong> extract a <code>resolveModule(name): string</code> helper with the chain above; first hit wins; aggregate the attempted paths into the error message on total miss (bash-style "command not found" ergonomics).</li>
   <li><strong>Collision reporting:</strong> <code>registerNamespace</code> currently overwrites silently — collect names that already existed and include "shadowing: x, y" in the <code>use</code> result message.</li>
@@ -564,7 +567,7 @@ escd_char = "\\" c:. { return c; }
 </div>
 
 <footer>
-  Source review: grammar.peg, docs/Syntax.md, README.md, src/pipeline.ts, src/helpers.ts, src/builtins/{core,environment,collections}.ts · hashpipe extensibility review, 2026-06-11 · rev 3, updated 2026-06-12 as findings shipped
+  Source review: grammar.peg, docs/Syntax.md, docs/Commands.md, docs/Cookbook.md, README.md, src/pipeline.ts, src/module-loader.ts, src/helpers.ts, src/builtins/{core,environment,collections}.ts · hashpipe extensibility review, 2026-06-11 · rev 4, updated 2026-06-21 to reflect current docs and shipped behavior
 </footer>
 
 </div>

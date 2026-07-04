@@ -25,6 +25,20 @@ describe("html module", () => {
         expect(result).toBe("Welcome ... First paragraph ... Second paragraph")
     })
 
+    test("html.html2text keeps leading text and unwrapped comments", async () => {
+        // HN comments lead with a bare text node and aren't all wrapped in <p>
+        const comment = "First paragraph.<p>Second paragraph."
+        const result = await execPipeline(pipe, "html.html2text", {
+            input: comment,
+        })
+        expect(result).toBe("First paragraph. ... Second paragraph.")
+
+        const plain = await execPipeline(pipe, "html.html2text", {
+            input: "Just a plain comment.",
+        })
+        expect(plain).toBe("Just a plain comment.")
+    })
+
     test("html.jq returns text and attributes for matching elements", async () => {
         const result = await execHtml('html.jq "p"')
         expect(result).toEqual([

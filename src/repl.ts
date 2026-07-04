@@ -2,7 +2,7 @@
 
 import * as readline from "readline"
 import readline_vim from "readline-vim"
-import { Pipeline, Scope } from "./pipeline"
+import { Pipeline, Scope, parsePipelines } from "./pipeline"
 import * as builtins from "./builtins"
 import ansi from "ansi"
 import { prettyPrint } from "./helpers"
@@ -44,6 +44,15 @@ class PipelineREPL {
     plain?: boolean
     run_once?: boolean
     rl?: readline.Interface
+
+    // Multi-line input: buffer of lines for a statement that isn't yet
+    // complete, plus bookkeeping to collapse those lines into one history
+    // entry once the statement finishes.
+    buffer: string = ""
+    stmtLineCount: number = 0
+    histLenAtStart: number = 0
+    lastSavedHistory: string | null = null
+    promptWidth: number = 0
 
     constructor(pipeline?: Pipeline) {
         if (!pipeline) {
@@ -159,14 +168,9 @@ class PipelineREPL {
         this.rl = rl
         ;(this.context as any)._readline = rl
 
-        // Overload readline's addHistory to save to our history file
-        const rl_addHistory = (rl as any)._addHistory
-        ;(rl as any)._addHistory = function () {
-            const last = (rl as any).history[0]
-            const line = rl_addHistory.call(rl)
-            if (last !== line) saveHistory(line)
-            return line
-        }
+        // History is saved per completed statement (see the line handler
+        // below), so multi-line statements become a single entry rather than
+        // one entry per physical line.
 
         // Bootstrap history from file
         loadHistory().then((saved_history) => {
@@ -192,8 +196,44 @@ class PipelineREPL {
 
         // Interpret input as scripts and run
         const run_once = this.run_once || !process.stdin.isTTY
-        rl.on("line", (script: string) => {
-            script = script.trim()
+        rl.on("line", (line: string) => {
+            const history = (rl as any).history as string[]
+            if (this.buffer === "") {
+                this.stmtLineCount = 0
+                // readline has already pushed this line onto history[0];
+                // remember where the statement began so we can collapse it.
+                this.histLenAtStart = history.length - 1
+            }
+            this.stmtLineCount++
+
+            const combined = this.buffer ? this.buffer + "\n" + line : line
+
+            // Keep buffering while the statement is only incomplete (a parse
+            // error at end-of-input). Genuine errors fall through and are
+            // reported by the normal execution path.
+            if (isIncomplete(combined)) {
+                this.buffer = combined
+                this.updatePrompt(true)
+                rl.prompt()
+                return
+            }
+
+            this.buffer = ""
+
+            // Collapse the physical lines of a multi-line statement into a
+            // single history entry (in memory and on disk).
+            if (this.stmtLineCount > 1) {
+                const added = history.length - this.histLenAtStart
+                if (added > 0) history.splice(0, added)
+                history.unshift(combined)
+            }
+            const trimmed = combined.trim()
+            if (trimmed.length && trimmed !== this.lastSavedHistory) {
+                saveHistory(trimmed)
+                this.lastSavedHistory = trimmed
+            }
+
+            let script = trimmed
             if (!script.length) script = "id"
             runScript(script).catch((err) => {
                 this.writeError(err)
@@ -202,21 +242,57 @@ class PipelineREPL {
             })
         })
 
+        // Ctrl-C cancels a pending multi-line statement instead of exiting.
+        rl.on("SIGINT", () => {
+            if (this.buffer) {
+                this.buffer = ""
+                process.stdout.write("\n")
+                this.updatePrompt()
+                rl.prompt()
+            } else {
+                rl.close()
+            }
+        })
+
         rl.on("close", () => {
             console.log("bye")
             process.exit()
         })
     }
 
-    updatePrompt(): void {
+    updatePrompt(continuation: boolean = false): void {
+        if (continuation) {
+            // Right-align "..| " under the main prompt so the pipe lines up
+            // with the "#| " of the most recently rendered main prompt.
+            const pad = Math.max(0, this.promptWidth - "..| ".length)
+            this.rl!.setPrompt(" ".repeat(pad) + colorize("..| ", 36))
+            return
+        }
         const time = "[" + formatDate(new Date(), "HH:mm") + "]"
         const cwd = process.cwd().replace(process.env.HOME || "", "~")
+        const marker = "#| "
+        // Visible width (joined with single spaces, ANSI codes excluded).
+        this.promptWidth = time.length + 1 + cwd.length + 1 + marker.length
         const parts = [
             colorize(time, 90),
             colorize(cwd, 34),
-            colorize("#| ", 36),
+            colorize(marker, 36),
         ].join(" ")
         this.rl!.setPrompt(parts)
+    }
+}
+
+// Input is "incomplete" when parsing fails with an error at end-of-input
+// (e.g. an unclosed `{| ... }` lambda or a trailing pipe). A parse error
+// before end-of-input is a genuine syntax error, not a continuation.
+function isIncomplete(src: string): boolean {
+    if (!src.trim()) return false
+    try {
+        parsePipelines(src)
+        return false
+    } catch (e: any) {
+        const offset = e?.location?.start?.offset
+        return typeof offset === "number" && offset >= src.length
     }
 }
 
