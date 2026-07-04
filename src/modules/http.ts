@@ -32,6 +32,7 @@ const parseResponseHeaders: ResponseParser = (res) => {
 }
 
 const parseResponseAll: ResponseParser = async (res, body) => ({
+    status: res.status,
     data: tryParseData(body),
     headers: parseResponseHeaders(res, body),
 })
@@ -76,6 +77,9 @@ function resolveFetch(): typeof fetch {
 function httpMethod(
     method: string,
     responseParser: ResponseParser = parseResponseData,
+    // Introspection commands (getv, headers) never throw on status;
+    // plain data commands turn non-2xx into structured pipeline errors
+    throwOnErrorStatus: boolean = true,
 ): HashpipeFunction {
     return command(async (inp: any, args: any[]) => {
         const rawUrl = args[0]
@@ -131,6 +135,17 @@ function httpMethod(
         const res = await fetchImpl(targetUrl, fetchOptions)
         const arrayBuffer = await res.arrayBuffer()
         const body = Buffer.from(arrayBuffer)
+        if (throwOnErrorStatus && !res.ok) {
+            // A structured error: |? receives it as input, so
+            // `|? @ status` and `|? @ body` work like any other value
+            throw {
+                error: `HTTP ${res.status} ${res.statusText} from ${targetUrl}`,
+                status: res.status,
+                statusText: res.statusText,
+                url: targetUrl,
+                body: tryParseData(body),
+            }
+        }
         return responseParser(res, body)
     })
 }
@@ -142,8 +157,8 @@ export const post = httpMethod("POST")
 export const put = httpMethod("PUT")
 export const patch = httpMethod("PATCH")
 
-export const getv = httpMethod("GET", parseResponseAll)
-export const headers = httpMethod("GET", parseResponseHeaders)
+export const getv = httpMethod("GET", parseResponseAll, false)
+export const headers = httpMethod("GET", parseResponseHeaders, false)
 export const options = httpMethod("OPTIONS")
 
 // Special export to avoid "delete" keyword

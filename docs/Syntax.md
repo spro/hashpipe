@@ -194,6 +194,35 @@ failed, receiving the error as input, and is skipped entirely on success.
 'FALLBACK'
 ```
 
+Some errors are structured values rather than strings — an HTTP request
+that returns a non-2xx status raises an object with `status`, `body`,
+and `url` — so the error pipe can take them apart like any other input
+(use `http.getv` when you want a response back regardless of status):
+
+```hashpipe
+#| use http
+#| http.get https://httpbingo.org/status/404 |? @ status
+404
+```
+
+Hashpipe is loud about *shape* mistakes and lenient about *missing*
+values. Reading an absent key gives `undefined`, but applying an
+operation to the wrong shape of value — mapping `:key` over an object,
+reading a named key from an array, slicing an object, or doing
+arithmetic on a non-numeric string — raises an error naming the
+operator and the offending value:
+
+```hashpipe
+#| {a: 1} @ nope
+undefined
+
+#| [{a: 1}, {a: 2}] @ a
+[ERROR] at-expression reads key 'a' from an array; use ':a' to map over the items or an index to pick one, got array [{"a":1},{"a":2}]
+
+#| "a" + "b"
+[ERROR] '+' expects numbers, got string "a"
+```
+
 ## Statements and comments
 
 Statements are separated by `;` or by newlines, so script files read

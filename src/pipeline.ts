@@ -211,12 +211,15 @@ export class Pipeline extends Scope {
     // and optional context. An empty child context is created if none is given.
     async exec(script: string, inp: any = null, ctx?: Scope): Promise<any> {
         const runCtx = ctx ?? this.subScope()
+        // Only actual parse failures get the parse label; runtime errors
+        // propagate as themselves (structured errors stay structured)
+        let pipelines: any[]
         try {
-            const pipelines = parsePipelines(script)
-            return await runPipelines(pipelines, inp, runCtx)
+            pipelines = parsePipelines(script)
         } catch (e) {
             throw "Error parsing pipeline: " + e
         }
+        return runPipelines(pipelines, inp, runCtx)
     }
 
     async execFile(
@@ -500,7 +503,15 @@ async function evalExpr(node: ExprNode, inp: any, ctx: Scope): Promise<any> {
 }
 
 function applyOp(op: string, a: any, b: any): any {
-    const num = (v: any) => Number(v) || 0
+    // Numeric strings coerce; anything else is a loud shape error rather
+    // than a silent 0 (e.g. "a" + "b" must not equal 0)
+    const num = (v: any) => {
+        const n = Number(v)
+        if (Number.isNaN(n)) {
+            throw shapeError(`'${op}' expects numbers`, v)
+        }
+        return n
+    }
     switch (op) {
         case "+":
             return num(a) + num(b)
@@ -549,6 +560,11 @@ export async function doCmd(_args: any[], inp: any, ctx: Scope): Promise<any> {
         try {
             return await run()
         } catch (e) {
+            // Structured errors (e.g. http status objects) pass through
+            // intact so |? stages can pick them apart with at-expressions
+            if (isObject(e) && !(e instanceof Error)) {
+                throw e
+            }
             throw `Error in command ${cmd}: ${e}`
         }
     }
@@ -609,16 +625,52 @@ function splitArgs(s: string): string[] {
     return args
 }
 
+// Shape errors are loud: name the operator and the offending value.
+// Missing keys stay lenient (undefined) — only wrong *shapes* raise.
+function typeName(v: any): string {
+    if (v === null) return "null"
+    if (Array.isArray(v)) return "array"
+    return typeof v
+}
+
+function preview(v: any): string {
+    let s: string
+    try {
+        s = JSON.stringify(v)
+    } catch {
+        s = String(v)
+    }
+    if (s == null) s = String(v)
+    return s.length > 40 ? s.slice(0, 40) + "..." : s
+}
+
+function shapeError(what: string, v: any): string {
+    return `${what}, got ${typeName(v)} ${preview(v)}`
+}
+
+// Render a map step's key for error messages ({...} templates and such
+// render as a placeholder rather than a token dump)
+function previewMapKey(key: any): string {
+    if (isString(key) || typeof key === "number") return String(key)
+    if (isObject(key) && key.obj != null) return "{...}"
+    if (Array.isArray(key)) return "[...]"
+    return "..."
+}
+
 // Map a function into array of arrays at a certain depth
 async function mapInto(
     l: any[],
     f: (item: any) => Promise<any>,
     d: number,
+    label: string,
 ): Promise<any[]> {
+    if (!Array.isArray(l)) {
+        throw shapeError(`at-expression '${label}' expects an array`, l)
+    }
     if (d === 1) {
         return Promise.all(l.map(f))
     }
-    return Promise.all(l.map((_l) => mapInto(_l, f, d - 1)))
+    return Promise.all(l.map((_l) => mapInto(_l, f, d - 1, label)))
 }
 
 //   , \-._ >._,_     _,_.< _.-/
@@ -661,7 +713,8 @@ async function descendObj(
     if (step.map != null) {
         const map_get = (__obj: any) =>
             descendObj(__obj, [{ get: step.map }], ctx)
-        return finish(await mapInto(obj, map_get, step.depth!))
+        const label = ":".repeat(step.depth || 1) + previewMapKey(step.map)
+        return finish(await mapInto(obj, map_get, step.depth!, label))
     }
     // Substitution
     else if (step.sub != null) {
@@ -731,8 +784,16 @@ function accessor(obj: any, key: any): any {
         // Wildcard: all values of an object (or the items of an array)
         return Array.isArray(obj) ? obj.slice() : Object.values(obj)
     } else if (isSliceAccessor(key)) {
-        if (obj == null || typeof obj.slice !== "function") {
-            return []
+        if (obj == null) {
+            // Missing values stay lenient, like missing keys
+            return undefined
+        }
+        if (typeof obj.slice !== "function") {
+            const { start, end } = key.slice
+            throw shapeError(
+                `at-expression slice '${start ?? ""}..${end ?? ""}' expects an array or string`,
+                obj,
+            )
         }
         const { start, end } = key.slice
         return obj.slice(start ?? undefined, end ?? undefined)
@@ -744,6 +805,12 @@ function accessor(obj: any, key: any): any {
                 return obj.slice(numKey)[0]
             }
             return obj[numKey]
+        }
+        if (Array.isArray(obj)) {
+            throw shapeError(
+                `at-expression reads key '${key}' from an array; use ':${key}' to map over the items or an index to pick one`,
+                obj,
+            )
         }
         return obj[key]
     }

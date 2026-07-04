@@ -100,6 +100,13 @@ describe("http module", () => {
                     return
                 }
 
+                if (method === "GET" && url === "/boom") {
+                    res.statusCode = 500
+                    res.setHeader("Content-Type", "application/json")
+                    res.end(JSON.stringify({ error: "exploded" }))
+                    return
+                }
+
                 res.statusCode = 404
                 res.end("not found")
             },
@@ -126,6 +133,33 @@ describe("http module", () => {
                 server.close((err) => (err ? reject(err) : resolve()))
             })
         }
+    })
+
+    test("non-2xx responses are pipeline errors carrying the status", async () => {
+        await expect(
+            execScript(`http.get "${baseUrl}/nope"`),
+        ).rejects.toMatchObject({
+            status: 404,
+            body: "not found",
+        })
+    })
+
+    test("status errors are catchable and pipeable via |?", async () => {
+        const status = await execScript(
+            `http.get "${baseUrl}/nope" |? @ status`,
+        )
+        expect(status).toEqual(404)
+
+        const errBody = await execScript(
+            `http.get "${baseUrl}/boom" |? @ body.error`,
+        )
+        expect(errBody).toEqual("exploded")
+    })
+
+    test("http.getv never throws on status and includes it", async () => {
+        const response = await execScript(`http.getv "${baseUrl}/boom"`)
+        expect(response.status).toEqual(500)
+        expect(response.data).toEqual({ error: "exploded" })
     })
 
     test("http.get merges query params", async () => {

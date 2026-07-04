@@ -20,12 +20,29 @@ function reducer(op: (a: any, b: any) => any): HashpipeFunction {
     return command((inp: any, args: any[]) => combine(inp, args).reduce(op))
 }
 
+// Numeric strings coerce; anything else raises rather than becoming 0.
+// The explicit `num` coercion command stays lenient by design.
+function strict(opName: string): (v: any) => number {
+    return (v: any) => {
+        const n = Number(v)
+        if (Number.isNaN(n)) {
+            throw `'${opName}' expects numbers, got ${JSON.stringify(v)}`
+        }
+        return n
+    }
+}
+
+const addNum = strict("+")
+const mulNum = strict("*")
+const subNum = strict("-")
+const divNum = strict("/")
+
 const mathBuiltins: BuiltinMap = {
     num: command((inp) => toNumber(inp)),
-    "+": reducer((a, b) => toNumber(a) + toNumber(b)),
-    "*": reducer((a, b) => toNumber(a) * toNumber(b)),
-    "-": reducer((a, b) => toNumber(a) - toNumber(b)),
-    "/": reducer((a, b) => toNumber(a) / toNumber(b)),
+    "+": reducer((a, b) => addNum(a) + addNum(b)),
+    "*": reducer((a, b) => mulNum(a) * mulNum(b)),
+    "-": reducer((a, b) => subNum(a) - subNum(b)),
+    "/": reducer((a, b) => divNum(a) / divNum(b)),
     ".": reducer((a, b) => a + b),
 }
 
