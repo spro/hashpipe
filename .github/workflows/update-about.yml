@@ -1,0 +1,42 @@
+# Stamp about.json on gh-pages with the time and commit of every push.
+# Runs for pushes to master and gh-pages; its own push (as github-actions[bot]
+# via GITHUB_TOKEN) does not re-trigger workflows, so it cannot loop.
+name: Update about.json
+
+on:
+  push:
+    branches: [master, gh-pages]
+
+concurrency:
+  group: update-about
+  cancel-in-progress: false
+
+jobs:
+  update-about:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Stamp about.json
+        run: |
+          node -e '
+            const fs = require("fs")
+            const about = JSON.parse(fs.readFileSync("about.json", "utf8"))
+            about.updated = new Date().toISOString()
+            about.commit = process.env.GITHUB_SHA.slice(0, 7)
+            fs.writeFileSync("about.json", JSON.stringify(about, null, 2) + "\n")
+          '
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add about.json
+          git diff --cached --quiet || {
+            git commit -m "Stamp about.json for ${GITHUB_SHA::7}"
+            git push
+          }
