@@ -19,11 +19,15 @@
     function scrollToPrompt() {
         // Scroll immediately and again on the next frame: the sync scroll
         // guarantees new entries are never appended out of view, the raf
-        // pass catches late layout (fonts, keyboard, async output)
+        // pass catches late layout (fonts, keyboard, async output).
+        // scrollIntoView must run BEFORE the scrollTop clamp: the input line
+        // is sticky, so scrollIntoView aligns to its stuck rect and stops
+        // padding-bottom short of the true bottom — leaving the last line of
+        // output hidden underneath the opaque input line
         terminal.scrollTop = terminal.scrollHeight
         window.requestAnimationFrame(function () {
-            terminal.scrollTop = terminal.scrollHeight
             if (inputLine.scrollIntoView) inputLine.scrollIntoView({ block: "end" })
+            terminal.scrollTop = terminal.scrollHeight
         })
     }
 
@@ -218,6 +222,13 @@
             busy = false
             drain()
         }
+        // `examples` is a repl-level command: the curated list lives here,
+        // not in the interpreter, but it renders like any other entry
+        if (job.script.trim() === "examples") {
+            renderExamples(job.entry)
+            finish()
+            return
+        }
         shell.exec(job.script).then(
             function (data) {
                 if (Hashpipe.HelpPage && data instanceof Hashpipe.HelpPage) {
@@ -376,8 +387,7 @@
         },
     ]
 
-    function showExamples() {
-        var entry = div("entry")
+    function renderExamples(parent) {
         var panel = div("help")
         EXAMPLES.forEach(function (section) {
             var title = div("help-title")
@@ -397,15 +407,15 @@
                 panel.appendChild(row)
             })
         })
-        entry.appendChild(panel)
-        append(entry)
+        parent.appendChild(panel)
     }
 
     var moreExamples = document.getElementById("more-examples")
     if (moreExamples) {
         moreExamples.addEventListener("click", function (e) {
             e.preventDefault()
-            showExamples()
+            saveHistory("examples")
+            run("examples")
         })
     }
 
@@ -413,7 +423,7 @@
 
     var banner = div("banner")
     banner.textContent =
-        "hashpipe browser repl — type help to get started. The http module " +
+        "hashpipe browser repl — type help or examples to get started. The http module " +
         "is preloaded (get, post, put, delete via fetch); up/down arrows " +
         "recall history."
     append(banner)
