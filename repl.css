@@ -61,6 +61,9 @@ nav a:hover { text-decoration: underline; }
   overscroll-behavior: contain;
 }
 
+/* The sticky input line's stuck position sits a few px above its flow
+   position, so without this the last line of output can slide under it */
+#scrollback { padding-bottom: 6px; }
 #scrollback .entry { margin-bottom: 10px; }
 
 .cmdline { color: #e8edf4; }
@@ -86,15 +89,30 @@ nav a:hover { text-decoration: underline; }
 
 .pending { color: #56c8d8; }
 
-.help { margin: 4px 0 2px; }
-
-.help-title {
-  color: #e8edf4;
-  font-weight: 600;
-  margin: 10px 0 4px;
+.help {
+  margin: 6px 0 2px;
+  padding: 10px 14px 12px;
+  background: #1d2430;
+  border: 1px solid #313a49;
+  border-radius: 6px;
 }
 
-.help-title:first-child { margin-top: 2px; }
+/* Chips sit on the lighter panel, so invert them toward the page color */
+.help .example {
+  background: #141920;
+  border-color: #39424f;
+}
+
+.help-title {
+  color: #56c8d8;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 14px 0 4px;
+}
+
+.help-title:first-child { margin-top: 0; }
 
 .help-line {
   color: #8b95a3;
