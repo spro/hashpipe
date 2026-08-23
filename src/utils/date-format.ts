@@ -75,6 +75,10 @@ const TOKEN_REGEX = new RegExp(
     "g",
 )
 
+/**
+ * Format a date using a token pattern. Text inside [brackets] is emitted
+ * literally without being interpreted as tokens (e.g. "YYYY[年]MM").
+ */
 export function formatDate(input: unknown, pattern: string): string {
     const date =
         input instanceof Date ? new Date(input) : new Date(input as any)
@@ -82,8 +86,17 @@ export function formatDate(input: unknown, pattern: string): string {
         return "Invalid Date"
     }
 
-    return pattern.replace(TOKEN_REGEX, (token) => {
-        const handler = formatTokenHandlers[token]
-        return handler ? handler(date) : token
+    // First extract bracketed literal sections so tokens inside them are left alone.
+    const literals: string[] = []
+    const unbracketed = pattern.replace(/\[([^\]]*)\]/g, (_, text) => {
+        literals.push(text as string)
+        return `\u0000${literals.length - 1}\u0000`
     })
+
+    return unbracketed
+        .replace(TOKEN_REGEX, (token) => {
+            const handler = formatTokenHandlers[token]
+            return handler ? handler(date) : token
+        })
+        .replace(/\u0000(\d+)\u0000/g, (_, index) => literals[Number(index)])
 }

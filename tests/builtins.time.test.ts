@@ -30,4 +30,14 @@ describe("time builtins", () => {
         )
         expect(result).toBe("2024-01-15")
     })
+
+    test("format-date treats bracketed text as literals", async () => {
+        const result = await runHashpipeFn(
+            builtins["format-date"],
+            "2024-01-15T10:30:00Z",
+            ["YYYY[年]MM[月]DD [HH:mm]"],
+            {},
+        )
+        expect(result).toBe("2024年01月15 HH:mm")
+    })
 })

@@ -153,7 +153,7 @@ Examples:
 | `now` | `now` | Current `Date`. |
 | `timestamp` | `timestamp` | Current Unix timestamp in milliseconds. |
 | `oid-timestamp` | `objectId | oid-timestamp` | Millisecond timestamp from a MongoDB ObjectId prefix. |
-| `format-date` | `date | format-date pattern` | Formats dates with Hashpipe's custom date formatter. |
+| `format-date` | `date | format-date pattern` | Formats dates with Hashpipe's custom date formatter. Text inside `[brackets]` is emitted literally (e.g. `YYYY[年]MM[月]DD`). |
 
 ## State, Modules, And Introspection
 
