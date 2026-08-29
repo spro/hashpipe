@@ -134,7 +134,10 @@ nav a:hover { text-decoration: underline; }
   align-items: baseline;
   position: sticky;
   bottom: 0;
-  margin: 8px -24px -14px;
+  /* Align the live prompt's baseline with the position where its archived
+     .cmdline will be inserted. The -14px cancels scrollback's 6px bottom
+     padding plus this line's 8px top padding. */
+  margin: -14px -24px -14px;
   padding: 8px 24px calc(14px + env(safe-area-inset-bottom));
   background: #14171c;
   border-top: 1px solid transparent;
@@ -212,7 +215,7 @@ footer .try { margin-right: 8px; }
   }
 
   #input-line {
-    margin: 8px -14px -10px;
+    margin: -14px -14px -10px;
     padding: 8px 14px calc(10px + env(safe-area-inset-bottom));
   }
 
