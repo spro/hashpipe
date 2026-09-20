@@ -85,13 +85,13 @@ export class Scope {
         if (DEBUG) {
             console.log(`[Scope get] Getting ${t} ${k}`)
         }
-        let got: any
         if (k != null) {
-            got = this[t]?.[k]
-        } else {
-            got = this[t]
+            if (Object.prototype.hasOwnProperty.call(this[t] || {}, k)) {
+                return this[t][k]
+            }
+            return this.parent?.get(t, k)
         }
-        return got || this.parent?.get(t, k)
+        return this[t] || this.parent?.get(t)
     }
 
     // Set an alias on the highest ranking scope

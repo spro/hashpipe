@@ -118,6 +118,26 @@ describe("error labeling and structured errors", () => {
     })
 })
 
+describe("environment commands", () => {
+    test("set preserves explicit falsy values instead of falling back to input", async () => {
+        for (const [script, expected] of [
+            ["echo fallback | set value 0 ; $value", 0],
+            [
+                "false | set falseValue ; echo fallback | set value $falseValue ; $value",
+                false,
+            ],
+            ["echo fallback | set value '' ; $value", ""],
+            [
+                "null | set nullValue ; echo fallback | set value $nullValue ; $value",
+                null,
+            ],
+        ]) {
+            const fresh = new Pipeline()
+            expect(await fresh.exec(script)).toEqual(expected)
+        }
+    })
+})
+
 describe("error propagation", () => {
     test("a failed command aborts the pipeline with its own error", async () => {
         await expect(

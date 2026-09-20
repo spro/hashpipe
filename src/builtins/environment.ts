@@ -7,7 +7,7 @@ import { isObject, isString } from "../utils/lang"
 
 const environmentBuiltins: BuiltinMap = {
     set: command((inp, args, ctx) => {
-        const data = args[1] || inp
+        const data = args.length > 1 ? args[1] : inp
         ctx.set("vars", args[0], data)
         return data
     }),
